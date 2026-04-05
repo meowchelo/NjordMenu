@@ -1,6 +1,7 @@
 # NjordMenu - Among us
 
-<img width="1300" height="1079" alt="Снимок экрана 2026-04-04 215008" src="https://github.com/user-attachments/assets/d14556a5-7646-4105-9d7c-a3e0bfcc9b9a" />
+<img width="745" height="432" alt="изображение" src="https://github.com/user-attachments/assets/68a781da-dc4f-4919-8b2b-79e01490b543" />
+
 
 NjordMenu is a lightweight BepInEx (IL2CPP) utility for Among Us.
 
