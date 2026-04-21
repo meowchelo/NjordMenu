@@ -15,7 +15,7 @@
 * **Trolling & Fun:** Ride players, spawn massive clone formations (Heart, Snowflake, Pentagram), Rainbow Colors, custom Chat Commands (`/color`, `/w`), and fake animations.
 * **UI Customization:** Fully modular GUI with RGB mode, custom image backgrounds (`MenuBG.png`), and smooth animations.
 
-## 🛡️ Njord Packet Shield & RPC Sniffer
+## 🛡️-RPC Sniffer
 
 NjordMenu comes with an advanced detection system:
 
