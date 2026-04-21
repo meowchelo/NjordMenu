@@ -14,8 +14,9 @@
 * **Lobby & Host Controls:** Force pre-game roles (without black screens), Smart End Game, unlimited settings, and Spawn/Despawn maps or lobbies on the fly.
 * **Trolling & Fun:** Ride players, spawn massive clone formations (Heart, Snowflake, Pentagram), Rainbow Colors, custom Chat Commands (`/color`, `/w`), and fake animations.
 * **UI Customization:** Fully modular GUI with RGB mode, custom image backgrounds (`MenuBG.png`), and smooth animations.
+<img width="1494" height="752" alt="Снимок экрана 2026-04-21 231703" src="https://github.com/user-attachments/assets/4029f5fe-0c68-42dc-8851-ccb73c4662fe" />
 
-## 🛡️-RPC Sniffer
+## 🛡️RPC Sniffer
 
 NjordMenu comes with an advanced detection system:
 
