@@ -1,6 +1,6 @@
 # NjordMenu 🌊
 
-**NjordMenu** - multi-functional [BepInEx](https://github.com/BepInEx/BepInEx) mod for Among Us, developed by **Meowchelo**. Built with the intention of providing ultimate control over your game, it features deep quality-of-life improvements, extensive host privileges, hilarious trolling utilities, and a robust Anti-Crash Shield to protect your lobbies from malicious actors.
+**NjordMenu** - multi-functional [BepInEx](https://github.com/BepInEx/BepInEx) mod for Among Us, developed by **Meowchelo**. Built with the intention of providing ultimate control over your game, it features deep quality-of-life improvements, extensive host privileges, hilarious trolling utilities.
 
 ## 📋 Features
 
