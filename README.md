@@ -5,7 +5,7 @@
 ## 📋 Features
 
 > [!NOTE]
-> NjordMenu contains highly advanced network manipulation tools. Features like server overloads (Crashers), forced bans, and global network manipulation are exceptionally powerful. Please use them responsibly and refer to the Disclaimer below.
+> NjordMenu contains highly advanced network manipulation tools. , forced bans, and global network manipulation are exceptionally powerful. Please use them responsibly and refer to the Disclaimer below.
 
 * **Extensive ESP & Visuals:** See ghosts, reveal player roles (even in meetings), view player info (Platform, Level, FriendCode), and enable Tracers or Full Bright.
 * **Account Spoofer:** Spoof your Name, Level, Platform (Epic, Steam, Xbox, Starlight, etc.), and bypass Chat Filters.
@@ -20,7 +20,7 @@
 
 NjordMenu comes with an advanced detection system:
 
-* **RPC Sniffer (Radar):** NjordMenu silently analyzes all incoming network traffic. It compares incoming RPC packets against a built-in database of known mod menus (such as *Hydra, HostGuard, Polar, BanMod, Eclipse, etc.*). If a player uses a hidden cheat feature, you will instantly receive an on-screen notification identifying the exact mod they are using.
+* **RPC Sniffer (Radar):** NjordMenu silently analyzes all incoming network traffic. It compares incoming RPC packets against a built-in database of known mod menus (such as *Hydra, HostGuard, Polar, BanMod, KillNetwork, etc.*). If a player uses a hidden cheat feature, you will instantly receive an on-screen notification identifying the exact mod they are using.
 
 ## ⚙️ Installation and Usage
 
