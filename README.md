@@ -20,7 +20,7 @@
 
 NjordMenu comes with an advanced detection system:
 
-* **RPC Sniffer (Radar):** NjordMenu silently analyzes all incoming network traffic. It compares incoming RPC packets against a built-in database of known mod menus (such as *Hydra, HostGuard, Polar, BanMod, KillNetwork, etc.*). If a player uses a hidden cheat feature, you will instantly receive an on-screen notification identifying the exact mod they are using.
+* **RPC Sniffer (Radar):** NjordMenu silently analyzes all incoming network traffic. It compares incoming RPC packets against a built-in database of known mod menus (such as *GNC, HostGuard, Polar, BanMod, KillNetwork, etc.*). If a player uses a hidden cheat feature, you will instantly receive an on-screen notification identifying the exact mod they are using.
 
 ## ⚙️ Installation and Usage
 
