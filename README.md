@@ -1,4 +1,4 @@
-# NjordMenu 🌊
+# NjordMenu🌊 - Among Us
 
 **NjordMenu** - multi-functional [BepInEx](https://github.com/BepInEx/BepInEx) mod for Among Us, developed by **Meowchelo**. Built with the intention of providing ultimate control over your game, it features deep quality-of-life improvements, extensive host privileges, hilarious trolling utilities.
 
