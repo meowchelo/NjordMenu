@@ -1,4 +1,4 @@
-﻿#nullable disable
+#nullable disable
 #pragma warning disable CS0162, CS0108, CS0219
 
 using AmongUs.Data.Player;
@@ -51,9 +51,12 @@ namespace NjordMenu
 
     public class NjordMenuGUI : MonoBehaviour
     {
-        // === МАССИВЫ ДЛЯ СПУФЕРА (NjordMenu с ID 133 на первом месте) ===
-        public static string[] spoofMenuNames = { "NjordMenu", "HostGuard/TOH", "Polar", "BanMod", "Better Among Us", "Sicko Menu" };
-        public static byte[] spoofMenuRPCs = { 89, 176, 204, 212, 151, 164 };
+        // === МАССИВЫ ДЛЯ СПУФЕРА (ОБНОВЛЕННЫЕ С GNC И KILLNETWORK) ===
+        public static string[] spoofMenuNames = { "NjordMenu", "HostGuard/TOH", "Polar", "BanMod", "Better Among Us", "Sicko Menu", "GNC", "KillNetwork (V1)", "KillNetwork (V2)", "KillNetwork (V3)" };
+        public static byte[] spoofMenuRPCs = { 89, 176, 204, 212, 151, 164, 154, 85, 150, 162 };
+
+        // Добавь к остальным переменным (например, рядом с selectedHydraPlayerId)
+        public static byte selectedMorphTargetId = 255;
 
         // === ПЕРЕМЕННЫЕ ДЛЯ БИНДОВ ===
         public static Dictionary<string, KeyCode> keyBinds = new Dictionary<string, KeyCode>();
@@ -169,7 +172,7 @@ namespace NjordMenu
 
         public static string[] platformNames = {
             "Epic", "Steam", "Mac", "Microsoft", "Itch", "iOS",
-            "Android", "Switch", "Xbox", "PlayStation", "Starlight", "Unknown"
+            "Android", "Switch", "Xbox", "PlayStation", "Starlight"
         };
 
         public static Platforms[] platformValues = {
@@ -183,10 +186,8 @@ namespace NjordMenu
             (Platforms)8,   // Switch
             (Platforms)9,   // Xbox
             (Platforms)10,  // PlayStation
-            (Platforms)112, // Starlight
-            Platforms.Unknown
+            (Platforms)112  // Starlight
         };
-       
 
         public static bool unlockFeatures = true;
 
@@ -301,32 +302,28 @@ namespace NjordMenu
                 if (names[i] == name.ToLower().Trim()) return i;
             return -1;
         }
-
         // ==========================================
-        // === НОВЫЕ КОРУТИНЫ ДЛЯ ФРЕЙМА (фикс античита) ===
+        // === НОВЫЕ КОРУТИНЫ ДЛЯ ФРЕЙМА (МЕОWCH LOGIC) ===
         // ==========================================
-        private IEnumerator AttemptShapeshiftFrame(PlayerControl target)
+        private IEnumerator AttemptShapeshiftFrame(PlayerControl target, PlayerControl morphInto)
         {
-            if (target == null || PlayerControl.LocalPlayer == null || AmongUsClient.Instance == null) yield break;
+            if (target == null || morphInto == null || PlayerControl.LocalPlayer == null || AmongUsClient.Instance == null) yield break;
 
             bool hasAnticheat = AmongUsClient.Instance.NetworkMode == NetworkModes.OnlineGame && !Constants.IsVersionModded();
-
-            PlayerControl randomPl = null;
-            foreach (var pc in PlayerControl.AllPlayerControls) { if (pc != target && !pc.Data.IsDead) { randomPl = pc; break; } }
-            if (randomPl == null) randomPl = PlayerControl.LocalPlayer;
 
             if (target.Data.RoleType != RoleTypes.Shapeshifter && hasAnticheat)
             {
                 RoleTypes currentRole = target.Data.RoleType;
                 target.RpcSetRole(RoleTypes.Shapeshifter, true);
                 yield return new WaitForSeconds(0.5f);
-                target.RpcShapeshift(randomPl, true);
+                target.RpcShapeshift(morphInto, true);
                 target.RpcSetRole(currentRole, true);
             }
             else
             {
-                target.RpcShapeshift(randomPl, true);
+                target.RpcShapeshift(morphInto, true);
             }
+            ShowNotification($"<color=#ca08ff>[MORPH]</color> <b>{target.Data.PlayerName}</b> превращен в <b>{morphInto.Data.PlayerName}</b>!");
         }
 
         private IEnumerator FrameAllCoroutine()
@@ -354,8 +351,8 @@ namespace NjordMenu
             {
                 if (pc != null && !pc.Data.IsDead)
                 {
-                    PlayerControl randomPl = PlayerControl.AllPlayerControls.ToArray().FirstOrDefault(p => p != pc && !p.Data.IsDead && !p.Data.Disconnected) ?? PlayerControl.LocalPlayer;
-                    pc.RpcShapeshift(randomPl, true);
+                    // МОРФАЕМ САМИ В СЕБЯ (Как в Meowch)
+                    pc.RpcShapeshift(pc, true);
 
                     if (hasAnticheat && originalRoles.ContainsKey(pc.PlayerId))
                     {
@@ -363,7 +360,9 @@ namespace NjordMenu
                     }
                 }
             }
+            ShowNotification("<color=#FF00FF>[EGG]</color> Все превратились в себя (яйцо)!");
         }
+
 
         // ==========================================
         // === НОВЫЙ МЕТОД FORCE MEETING AS PLAYER ===
@@ -439,40 +438,7 @@ namespace NjordMenu
             catch { }
         }
 
-        // ==========================================
-        // === ФУНКЦИИ САБОТАЖЕЙ ===
-        // ==========================================
-        private void ToggleReactor(bool state) { if (ShipStatus.Instance == null) return; byte flag = (byte)(state ? 128 : 16); try { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Reactor, flag); ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Laboratory, flag); if (state) ShipStatus.Instance.RpcUpdateSystem(SystemTypes.HeliSabotage, (byte)128); else { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.HeliSabotage, (byte)16); ShipStatus.Instance.RpcUpdateSystem(SystemTypes.HeliSabotage, (byte)17); } } catch { } }
-        private void ToggleO2(bool state) { if (ShipStatus.Instance == null) return; try { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.LifeSupp, (byte)(state ? 128 : 16)); } catch { } }
-        private void ToggleComms(bool state) { if (ShipStatus.Instance == null) return; try { if (state) ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Comms, (byte)128); else { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Comms, (byte)16); ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Comms, (byte)17); } } catch { } }
-        private void ToggleLights(bool state)
-        {
-            if (ShipStatus.Instance == null) return;
-            try
-            {
-                if (state)
-                {
-                    byte b = 4;
-                    for (int i = 0; i < 5; i++) if (UnityEngine.Random.value > 0.5f) b |= (byte)(1 << i);
-                    ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Electrical, (byte)(b | 128));
-                }
-                else
-                {
-                    var sys = ShipStatus.Instance.Systems[SystemTypes.Electrical].Cast<SwitchSystem>();
-                    if (sys != null)
-                    {
-                        for (int i = 0; i < 5; i++)
-                        {
-                            bool expected = (sys.ExpectedSwitches & (1 << i)) != 0;
-                            bool actual = (sys.ActualSwitches & (1 << i)) != 0;
-                            if (expected != actual) ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Electrical, (byte)i);
-                        }
-                    }
-                }
-            }
-            catch { }
-        }
-        private void SabotageMushroom() { if (ShipStatus.Instance == null) return; try { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.MushroomMixupSabotage, (byte)1); } catch { } }
+
 
         // ==========================================
         // === МЕТОДЫ АНЛОКА И ГЛОБАЛА ===
@@ -786,6 +752,20 @@ namespace NjordMenu
             titleStyle.padding = CreateRectOffset(10, 0, 8, 0);
 
             stylesInited = true;
+            // === MEOWCH CUSTOM SCROLLBARS ===
+            GUI.skin.verticalScrollbar.normal.background = MakeRoundedTex(16, new Color(0.10f, 0.10f, 0.10f, 0.8f), 6f);
+            GUI.skin.verticalScrollbar.fixedWidth = 6f;
+            GUI.skin.verticalScrollbar.margin = CreateRectOffset(2, 2, 0, 0);
+
+            // Используем texAccent, чтобы ползунок скролла автоматически менял цвет вместе с меню!
+            GUI.skin.verticalScrollbarThumb.normal.background = texAccent;
+            GUI.skin.verticalScrollbarThumb.fixedWidth = 6f;
+
+            // Прячем горизонтальный скролл (он нам не нужен)
+            GUI.skin.horizontalScrollbar.normal.background = null;
+            GUI.skin.horizontalScrollbarThumb.normal.background = null;
+
+            stylesInited = true;
         }
 
         private void LoadBackgroundImage()
@@ -888,24 +868,29 @@ namespace NjordMenu
             return (clickedBox || clickedText) ? !value : value;
         }
 
-        // ==========================================
-        // === GUI ВКЛАДКИ ===
-        // ==========================================
         private void DrawGeneralTab()
         {
             GUILayout.BeginVertical(boxStyle);
-            GUILayout.Label("INFORMATION", headerStyle);
+            GUILayout.Label("INFORMATION & HOTKEYS", headerStyle);
             GUILayout.Space(10);
+
             GUIStyle textStyle = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true, fontSize = 13 };
-            string title = ApplyMenuShimmer("Welcome to NjordMenu!");
-            string respect = ApplyMenuShimmer("Respect other players:");
-            string useWisely = ApplyMenuShimmer("Use wisely:");
-            string risks = ApplyMenuShimmer("Risks:");
-            string infoText = $"<size=15><b>{title}</b></size>\n\n" +
-                $"<color=#FFFFFF>NjordMenu is a multi-functional tool created by <b>Meowchelo</b> to enhance the Among Us experience.</color>\n\n" +
-                $"<b>{respect}</b> <color=#FFFFFF>Remember that there are real people behind those screens who just want to relax.</color>\n\n" +
-                $"<b>{useWisely}</b> <color=#FFFFFF>Use aggressive features only in private lobbies with friends.</color>\n\n" +
-                $"<b>{risks}</b> <color=#FFFFFF>Abusing these features in public games can lead to reports and banning of your account.</color>";
+
+            string title = ApplyMenuShimmer("Welcome to NjordMenu v1.0!");
+            string subtitle = "<color=#aaaaaa><b>(Meowch Logic Edition)</b></color>";
+
+            string infoText = $"<size=16><b>{title}</b></size>\n{subtitle}\n\n" +
+                $"<color=#FFFFFF>NjordMenu is a multi-functional tool created by <b>Meowchelo</b>. " +
+                $"This updated version integrates the premium UI and advanced features from the Meowch Client.</color>\n\n" +
+                $"<b><color=#FFAC1C>📌 HOTKEYS:</color></b>\n" +
+                $"• <b>[Insert]</b> or <b>[Right Shift]</b> — Open / Close Menu\n" +
+                $"• <b>[ M ]</b> — Quick Morph Selected Target\n" +
+                $"• <b>[ Right Click ]</b> — Teleport to Cursor (if enabled)\n\n" +
+                $"<b><color=#00FF00>🛡️ SAFE PLAY:</color></b>\n" +
+                $"Please respect other players. Use aggressive features (like Kill All or Force Roles) only in private lobbies with friends.\n\n" +
+                $"<b><color=#FF0000>⚠️ RISKS:</color></b>\n" +
+                $"Abusing these features in public games can lead to reports and account bans. Play smart!";
+
             GUILayout.Label(infoText, textStyle);
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
@@ -1051,9 +1036,16 @@ namespace NjordMenu
                 SaveConfig();
             }
             GUILayout.Space(10);
-            GUILayout.Label($"Platform: {platformValues[currentPlatformIndex].ToString()}", new GUIStyle(toggleLabelStyle) { fontSize = 13 }, GUILayout.Height(28));
+            string hexColor = ColorUtility.ToHtmlStringRGB(currentAccentColor);
+
+            // ИСПОЛЬЗУЕМ КРАСИВОЕ ИМЯ ИЗ МАССИВА (platformNames), А НЕ СИСТЕМНОЕ
+            GUILayout.Label($"Platform: <color=#{hexColor}>{platformNames[currentPlatformIndex]}</color>", new GUIStyle(toggleLabelStyle) { fontSize = 13, richText = true }, GUILayout.Height(28));
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
+
+            GUILayout.Space(5);
+
+            // ВОЗВРАЩАЕМ ЗАКРУГЛЕННЫЙ СЛАЙДЕР ВМЕСТО СЕТКИ
             GUILayout.BeginHorizontal();
             int newPlatIdx = (int)GUILayout.HorizontalSlider(currentPlatformIndex, 0, platformNames.Length - 1, sliderStyle, sliderThumbStyle, GUILayout.Width(290));
             if (newPlatIdx != currentPlatformIndex)
@@ -1127,7 +1119,10 @@ namespace NjordMenu
         private void DrawPlayersTab()
         {
             GUILayout.BeginHorizontal();
-            // Левая панель - список
+
+            // ==========================================
+            // ЛЕВАЯ КОЛОНКА (Список игроков)
+            // ==========================================
             GUILayout.BeginVertical(boxStyle, GUILayout.Width(200));
             playerListScrollPos = GUILayout.BeginScrollView(playerListScrollPos);
             if (lockedPlayersList.Count > 0)
@@ -1136,26 +1131,39 @@ namespace NjordMenu
                 {
                     if (pc == null || pc.Data == null || pc.PlayerId >= 100) continue;
                     string pName = pc.Data.PlayerName ?? "Unknown";
+
                     if (forcedPreGameRoles.ContainsKey(pc.PlayerId)) pName += " [*]";
                     else if (forcedImpostors.Contains(pc.PlayerId)) pName += " [Imp]";
+
                     bool isSelected = selectedHydraPlayerId == pc.PlayerId;
+
                     GUI.contentColor = Color.white;
                     try { GUI.contentColor = Palette.PlayerColors[pc.Data.DefaultOutfit.ColorId]; } catch { }
-                    if (GUILayout.Button(pName, isSelected ? activeTabStyle : btnStyle, GUILayout.Height(30))) selectedHydraPlayerId = pc.PlayerId;
+
+                    if (GUILayout.Button(pName, isSelected ? activeTabStyle : btnStyle, GUILayout.Height(30)))
+                    {
+                        selectedHydraPlayerId = pc.PlayerId;
+                    }
                     GUI.contentColor = Color.white;
                 }
             }
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
 
-            // Правая панель - действия
+            // ==========================================
+            // ПРАВАЯ КОЛОНКА (Информация и Действия)
+            // ==========================================
             GUILayout.BeginVertical(boxStyle, GUILayout.ExpandWidth(true));
             playerActionScrollPos = GUILayout.BeginScrollView(playerActionScrollPos);
+
             PlayerControl target = lockedPlayersList.FirstOrDefault(p => p.PlayerId == selectedHydraPlayerId);
+
             if (target != null && target.Data != null)
             {
                 GUILayout.Label($"<color=#aaaaaa>Selected:</color> {target.Data.PlayerName}", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 14 });
                 GUILayout.Space(10);
+
+                // --- БЫСТРЫЕ ДЕЙСТВИЯ ---
                 GUILayout.BeginHorizontal();
                 GUI.backgroundColor = new Color(0.8f, 0.2f, 0.2f, 1f);
                 if (GUILayout.Button("KILL", btnStyle, GUILayout.Height(30)))
@@ -1167,19 +1175,68 @@ namespace NjordMenu
                     PlayerControl.LocalPlayer.NetTransform.RpcSnapTo(op);
                 }
                 GUI.backgroundColor = Color.white;
+
                 GUILayout.Space(5);
-                // НОВАЯ КНОПКА FORCE MEETING (использует фикс)
                 if (GUILayout.Button("Force Meeting", btnStyle, GUILayout.Height(30))) ForceMeetingAsPlayer(target);
+
                 GUILayout.Space(5);
                 bool hr = rainbowPlayers.Contains(target.PlayerId);
                 if (GUILayout.Button(hr ? "RGB: ON" : "RGB: OFF", hr ? activeTabStyle : btnStyle, GUILayout.Height(30)))
-                { if (!hr) rainbowPlayers.Add(target.PlayerId); else rainbowPlayers.Remove(target.PlayerId); }
+                {
+                    if (!hr) rainbowPlayers.Add(target.PlayerId);
+                    else rainbowPlayers.Remove(target.PlayerId);
+                }
                 GUILayout.EndHorizontal();
-                GUILayout.Space(5);
-                // КНОПКА FRAME SHAPE - запуск корутины
-                if (DrawBindableButton("Frame Shape", "Frame Shape", 90f))
-                    this.StartCoroutine(AttemptShapeshiftFrame(target).WrapToIl2Cpp());
 
+                // --- УМНЫЙ ВЫБОР ЦЕЛИ ДЛЯ МОРФА ---
+                GUILayout.Space(15);
+                GUILayout.Label("<color=#aaaaaa>Morph Target:</color>", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 11 });
+                GUILayout.BeginHorizontal();
+
+                int mIdx = lockedPlayersList.FindIndex(p => p.PlayerId == selectedMorphTargetId);
+
+                GUI.backgroundColor = currentAccentColor;
+                if (GUILayout.Button("<", btnStyle, GUILayout.Width(25), GUILayout.Height(25)))
+                {
+                    if (lockedPlayersList.Count > 0) { mIdx--; if (mIdx < 0) mIdx = lockedPlayersList.Count - 1; selectedMorphTargetId = lockedPlayersList[mIdx].PlayerId; }
+                }
+                GUI.backgroundColor = Color.white;
+
+                string morphName = "Target";
+                if (mIdx >= 0 && mIdx < lockedPlayersList.Count) morphName = lockedPlayersList[mIdx].Data.PlayerName;
+                if (morphName.Length > 10) morphName = morphName.Substring(0, 10) + "..";
+
+                GUIStyle morphLabelStyle = new GUIStyle(btnStyle);
+                morphLabelStyle.normal.background = null;
+                morphLabelStyle.hover.background = null;
+                morphLabelStyle.normal.textColor = currentAccentColor;
+                morphLabelStyle.fontStyle = FontStyle.Bold;
+                morphLabelStyle.alignment = TextAnchor.MiddleCenter;
+
+                GUILayout.Label(morphName, morphLabelStyle, GUILayout.Height(25), GUILayout.ExpandWidth(true));
+
+                GUI.backgroundColor = currentAccentColor;
+                if (GUILayout.Button(">", btnStyle, GUILayout.Width(25), GUILayout.Height(25)))
+                {
+                    if (lockedPlayersList.Count > 0) { mIdx++; if (mIdx >= lockedPlayersList.Count) mIdx = 0; selectedMorphTargetId = lockedPlayersList[mIdx].PlayerId; }
+                }
+                GUILayout.EndHorizontal();
+
+                // АККУРАТНАЯ КНОПКА МОРФА ПО ЦЕНТРУ
+                GUILayout.Space(5);
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                GUI.backgroundColor = new Color(1f, 0.5f, 0f, 1f);
+                if (GUILayout.Button("MORPH TARGET", btnStyle, GUILayout.Width(160), GUILayout.Height(25)))
+                {
+                    var morphTarget = lockedPlayersList.FirstOrDefault(p => p.PlayerId == selectedMorphTargetId) ?? target;
+                    this.StartCoroutine(AttemptShapeshiftFrame(target, morphTarget).WrapToIl2Cpp());
+                }
+                GUI.backgroundColor = Color.white;
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+
+                // --- УСТАНОВКА ЦВЕТА ---
                 GUILayout.Space(15);
                 GUILayout.Label("SET PLAYER COLOR", headerStyle);
                 GUILayout.BeginVertical(boxStyle);
@@ -1195,6 +1252,7 @@ namespace NjordMenu
                 GUI.backgroundColor = Color.white;
                 GUILayout.EndVertical();
 
+                // --- PRE-GAME ROLES (HOST) ---
                 GUILayout.Space(15);
                 GUILayout.Label("PRE-GAME ROLE (HOST)", headerStyle);
                 GUILayout.BeginHorizontal();
@@ -1211,8 +1269,10 @@ namespace NjordMenu
                 GUILayout.Label("<color=#777777>Select a player...</color>", new GUIStyle(GUI.skin.label) { richText = true, alignment = TextAnchor.MiddleCenter });
                 GUILayout.FlexibleSpace();
             }
+
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
+
             GUILayout.EndHorizontal();
         }
 
@@ -1293,162 +1353,210 @@ namespace NjordMenu
             GUILayout.EndHorizontal();
         }
 
+        // === ПЕРЕМЕННЫЕ ДЛЯ САБОТАЖЕЙ И ДВЕРЕЙ ===
+        private Vector2 doorsScrollPos = Vector2.zero;
+
         private void DrawSabotagesTab()
         {
             GUILayout.BeginVertical(boxStyle);
             GUILayout.Label("CRITICAL SABOTAGES", headerStyle);
 
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Reactor / Lab", reactorSab ? activeTabStyle : btnStyle, GUILayout.Height(35)))
-            {
-                reactorSab = !reactorSab;
-                ToggleReactor(reactorSab);
-            }
-            if (GUILayout.Button("Oxygen", oxygenSab ? activeTabStyle : btnStyle, GUILayout.Height(35)))
-            {
-                oxygenSab = !oxygenSab;
-                ToggleO2(oxygenSab);
-            }
-            GUILayout.EndHorizontal();
+            // === КНОПКА ПОЧИНКИ ===
+            if (GUILayout.Button("FIX ALL SABOTAGES & DOORS", activeTabStyle, GUILayout.Height(35))) FixAllSabotages();
+            GUILayout.Space(10);
 
+            // === РЯД 1: КРАСНЫЕ (Реактор, Кислород) ===
+            GUILayout.BeginHorizontal();
+            GUI.backgroundColor = reactorSab ? new Color(1f, 0.3f, 0.3f, 1f) : Color.white;
+            if (GUILayout.Button(reactorSab ? "Reactor: ON" : "Reactor", reactorSab ? activeTabStyle : btnStyle, GUILayout.Height(35))) { reactorSab = !reactorSab; ToggleReactor(reactorSab); }
+
+            GUI.backgroundColor = oxygenSab ? new Color(1f, 0.3f, 0.3f, 1f) : Color.white;
+            if (GUILayout.Button(oxygenSab ? "Oxygen: ON" : "Oxygen", oxygenSab ? activeTabStyle : btnStyle, GUILayout.Height(35))) { oxygenSab = !oxygenSab; ToggleO2(oxygenSab); }
+            GUI.backgroundColor = Color.white;
+            GUILayout.EndHorizontal();
             GUILayout.Space(5);
 
+            // === РЯД 2: ЗЕЛЕНЫЕ (Связь, Свет) ===
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Comms", commsSab ? activeTabStyle : btnStyle, GUILayout.Height(35)))
-            {
-                commsSab = !commsSab;
-                ToggleComms(commsSab);
-            }
-            if (GUILayout.Button("Lights", elecSab ? activeTabStyle : btnStyle, GUILayout.Height(35)))
-            {
-                elecSab = !elecSab;
-                ToggleLights(elecSab);
-            }
+            GUI.backgroundColor = commsSab ? new Color(0.3f, 1f, 0.3f, 1f) : Color.white;
+            if (GUILayout.Button(commsSab ? "Comms: ON" : "Comms", commsSab ? activeTabStyle : btnStyle, GUILayout.Height(35))) { commsSab = !commsSab; ToggleComms(commsSab); }
+
+            GUI.backgroundColor = elecSab ? new Color(0.3f, 1f, 0.3f, 1f) : Color.white;
+            if (GUILayout.Button(elecSab ? "Lights: ON" : "Lights", elecSab ? activeTabStyle : btnStyle, GUILayout.Height(35))) { elecSab = !elecSab; ToggleLights(elecSab); }
+            GUI.backgroundColor = Color.white;
             GUILayout.EndHorizontal();
 
             GUILayout.Space(10);
-            if (GUILayout.Button("Trigger Mushroom (Fungle)", btnStyle, GUILayout.Height(35)))
-            {
-                SabotageMushroom();
-            }
-
+            if (GUILayout.Button("Trigger Mushroom (Fungle)", btnStyle, GUILayout.Height(30))) SabotageMushroom();
             GUILayout.EndVertical();
-        }
 
-        private void DrawHostOnlyTab()
-        {
-            GUILayout.BeginHorizontal();
-            for (int i = 0; i < hostOnlySubTabs.Length; i++)
-                if (GUILayout.Button(hostOnlySubTabs[i], currentHostOnlySubTab == i ? activeSubTabStyle : subTabStyle, GUILayout.Height(18)))
-                { currentHostOnlySubTab = i; scrollPosition = Vector2.zero; }
-            GUILayout.EndHorizontal();
-            GUILayout.Space(8);
-            if (currentHostOnlySubTab == 0) DrawLobbyControls();
-            else if (currentHostOnlySubTab == 1) DrawPlayersRoles();
-        }
+            GUILayout.Space(10);
 
-        private void DrawLobbyControls()
-        {
+            // === ГЛОБАЛЬНЫЕ ДВЕРИ ===
             GUILayout.BeginVertical(boxStyle);
-            GUILayout.Label("LOBBY CONTROLS", headerStyle);
-
+            GUILayout.Label("DOORS CONTROL", headerStyle);
             GUILayout.BeginHorizontal();
-
-            // --- Левая колонка ---
-            GUILayout.BeginVertical(GUILayout.Width(280));
-            neverEndGame = DrawToggle(neverEndGame, "Unlimited Game", 250);
-            GUILayout.Space(5);
-            noSettingLimit = DrawToggle(noSettingLimit, "No Setting Limit", 250);
-            GUILayout.Space(5);
-            noTaskMode = DrawToggle(noTaskMode, "No Task Mode", 250);
-            GUILayout.Space(5);
-            enableColorCommand = DrawToggle(enableColorCommand, "Enable /c command (Public)", 250);
-            GUILayout.Space(5);
-            blockFortegreenChat = DrawToggle(blockFortegreenChat, "Block Fortegreen Chat", 250);
-            GUILayout.Space(5);
-            blockRainbowChat = DrawToggle(blockRainbowChat, "Block Rainbow Chat", 250);
-            GUILayout.EndVertical();
-
-            GUILayout.Space(10);
-
-            // --- Правая колонка ---
-            GUILayout.BeginVertical(GUILayout.Width(280));
-            LogAllRPCs = DrawToggle(LogAllRPCs, "Sniff All RPCs (On-Screen)", 250);
-            GUILayout.Space(5);
-            EnableCustomNotifs = DrawToggle(EnableCustomNotifs, "Enable Custom UI Notifications", 250);
-
-            GUILayout.Space(5);
-            bool prevTroll = fakeStartCounterTroll;
-            fakeStartCounterTroll = DrawToggle(fakeStartCounterTroll, "Fuck start (Random)", 250);
-            if (fakeStartCounterTroll && !prevTroll) fakeStartCounterCustom = false;
-
-            // Вот он, потерянный блок кастомного старта!
-            GUILayout.Space(5);
-            bool prevCustom = fakeStartCounterCustom;
-            fakeStartCounterCustom = DrawToggle(fakeStartCounterCustom, "Fuck start (Custom)", 250);
-            if (fakeStartCounterCustom && !prevCustom) fakeStartCounterTroll = false;
-
-            GUILayout.Space(5);
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(36);
-            string fsDisp = isEditingFakeStart ? fakeStartInput + "_" : fakeStartInput;
-            if (GUILayout.Button(fsDisp, isEditingFakeStart ? activeTabStyle : inputBlockStyle, GUILayout.Width(130), GUILayout.Height(22))) { isEditingFakeStart = !isEditingFakeStart; isEditingName = false; isEditingLevel = false; }
+            if (GUILayout.Button("Close All Doors", btnStyle, GUILayout.Height(30))) SabotageDoors();
+            if (GUILayout.Button("Open All Doors", btnStyle, GUILayout.Height(30))) OpenAllDoors();
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
 
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(15);
-            GUILayout.Label("HOST ACTIONS", headerStyle);
-
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Insta Start", btnStyle, GUILayout.Height(25), GUILayout.Width(140)) && GameStartManager.Instance != null && AmongUsClient.Instance.AmHost)
-            { GameStartManager.Instance.startState = GameStartManager.StartingStates.Countdown; GameStartManager.Instance.countDownTimer = 0f; }
             GUILayout.Space(10);
-            if (GUILayout.Button("Close Meeting", btnStyle, GUILayout.Height(25), GUILayout.Width(140)) && MeetingHud.Instance != null && AmongUsClient.Instance.AmHost) MeetingHud.Instance.RpcClose();
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
 
-            // === КНОПКИ ЛОББИ ===
-            GUILayout.Space(10);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Spawn Lobby", activeTabStyle, GUILayout.Height(25), GUILayout.Width(140))) SpawnLobby();
-            GUILayout.Space(10);
-            if (GUILayout.Button("Despawn Lobby", btnStyle, GUILayout.Height(25), GUILayout.Width(140))) DespawnLobby();
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
+            // === ТОЧЕЧНЫЕ ДВЕРИ (БЕЗ ДВОЙНОГО СКРОЛЛА) ===
+            GUILayout.BeginVertical(boxStyle);
+            GUILayout.Label("SPECIFIC DOORS", headerStyle);
 
-            GUILayout.Space(10);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Kill All", btnStyle, GUILayout.Width(93f), GUILayout.Height(30))) KillAll();
-            if (GUILayout.Button("Kick All", btnStyle, GUILayout.Width(93f), GUILayout.Height(30))) KickAll();
-            if (GUILayout.Button("Frame All", btnStyle, GUILayout.Width(93f), GUILayout.Height(30))) this.StartCoroutine(FrameAllCoroutine().WrapToIl2Cpp());
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
+            if (ShipStatus.Instance != null && ShipStatus.Instance.AllDoors != null)
+            {
+                var rooms = ShipStatus.Instance.AllDoors.Select(d => d.Room).Distinct().ToList();
+                foreach (var room in rooms)
+                {
+                    GUILayout.BeginHorizontal(boxStyle);
+                    GUILayout.Label($"<b>{room}</b>", toggleLabelStyle, GUILayout.Width(130));
+                    GUILayout.FlexibleSpace();
 
-            // === SMART END GAME КНОПКИ ===
-            GUILayout.Space(15);
-            GUILayout.Label("SMART END GAME", headerStyle);
-
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Crewmate Win", btnStyle, GUILayout.Height(30))) SmartEndGame("CrewWin");
-            if (GUILayout.Button("Impostor Win", btnStyle, GUILayout.Height(30))) SmartEndGame("ImpWin");
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(5);
-
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Imp Disconnect", btnStyle, GUILayout.Height(30))) SmartEndGame("ImpDisconnect");
-            if (GUILayout.Button("H&S Seeker Disconnect", activeTabStyle, GUILayout.Height(30))) SmartEndGame("HnsImpDisconnect");
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(5);
-            if (GUILayout.Button("Force End (Impostor Disconnect)", btnStyle, GUILayout.Height(25), GUILayout.Width(290)) && GameManager.Instance != null && AmongUsClient.Instance.AmHost)
-            { bool tempNeverEnd = neverEndGame; neverEndGame = false; GameManager.Instance.RpcEndGame((GameOverReason)4, false); neverEndGame = tempNeverEnd; }
-
+                    if (GUILayout.Button("Close", btnStyle, GUILayout.Width(70), GUILayout.Height(25)))
+                    {
+                        try
+                        {
+                            ShipStatus.Instance.RpcCloseDoorsOfType(room);
+                            foreach (var d in ShipStatus.Instance.AllDoors)
+                                if (d != null && d.Room == room)
+                                    ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Doors, (byte)d.Id);
+                        }
+                        catch { }
+                    }
+                    GUILayout.Space(5);
+                    if (GUILayout.Button("Open", btnStyle, GUILayout.Width(70), GUILayout.Height(25)))
+                    {
+                        foreach (var d in ShipStatus.Instance.AllDoors)
+                        {
+                            if (d != null && d.Room == room)
+                            {
+                                d.SetDoorway(true);
+                                try { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Doors, (byte)(d.Id | 64)); } catch { }
+                            }
+                        }
+                    }
+                    GUILayout.EndHorizontal();
+                    GUILayout.Space(2);
+                }
+            }
+            else
+            {
+                GUILayout.Label("<color=#777777>Вы не в игре или на карте нет дверей.</color>", new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, richText = true });
+            }
             GUILayout.EndVertical();
         }
+
+        // ==========================================
+        // === ЛОГИКА САБОТАЖЕЙ (КАК В MEOWCH) ======
+        // ==========================================
+        private void FixAllSabotages()
+        {
+            if (ShipStatus.Instance == null) return;
+            try
+            {
+                reactorSab = false;
+                oxygenSab = false;
+                commsSab = false;
+                elecSab = false;
+
+                ToggleReactor(false);
+                ToggleO2(false);
+                ToggleComms(false);
+                ToggleLights(false);
+
+                if (ShipStatus.Instance.AllDoors != null)
+                {
+                    foreach (var door in ShipStatus.Instance.AllDoors)
+                    {
+                        if (door != null)
+                        {
+                            door.SetDoorway(true);
+                            try { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Doors, (byte)(door.Id | 64)); } catch { }
+                        }
+                    }
+                }
+                try { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.MushroomMixupSabotage, 0); } catch { }
+                ShowNotification("<color=#00FF00>[SABOTAGE]</color> Все саботажи и двери починены!");
+            }
+            catch (Exception ex) { Debug.Log("Fix All Sabotages Error: " + ex.Message); }
+        }
+
+        private void SabotageDoors()
+        {
+            if (ShipStatus.Instance == null || ShipStatus.Instance.AllDoors == null) return;
+            try
+            {
+                var rooms = new System.Collections.Generic.HashSet<SystemTypes>();
+                foreach (var door in ShipStatus.Instance.AllDoors)
+                {
+                    if (door != null)
+                    {
+                        rooms.Add(door.Room);
+                        try { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Doors, (byte)door.Id); } catch { }
+                    }
+                }
+                foreach (var room in rooms)
+                {
+                    try { ShipStatus.Instance.RpcCloseDoorsOfType(room); } catch { }
+                }
+                ShowNotification("<color=#FF0000>[DOORS]</color> Сигнал на закрытие отправлен!");
+            }
+            catch { }
+        }
+
+        private void OpenAllDoors()
+        {
+            if (ShipStatus.Instance == null || ShipStatus.Instance.AllDoors == null) return;
+            try
+            {
+                foreach (var door in ShipStatus.Instance.AllDoors)
+                {
+                    if (door != null)
+                    {
+                        door.SetDoorway(true);
+                        try { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Doors, (byte)(door.Id | 64)); } catch { }
+                    }
+                }
+                ShowNotification("<color=#00FF00>[DOORS]</color> Все двери открыты!");
+            }
+            catch { }
+        }
+
+        private void ToggleReactor(bool state) { if (ShipStatus.Instance == null) return; byte flag = (byte)(state ? 128 : 16); try { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Reactor, flag); ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Laboratory, flag); if (state) ShipStatus.Instance.RpcUpdateSystem(SystemTypes.HeliSabotage, (byte)128); else { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.HeliSabotage, (byte)16); ShipStatus.Instance.RpcUpdateSystem(SystemTypes.HeliSabotage, (byte)17); } } catch { } }
+        private void ToggleO2(bool state) { if (ShipStatus.Instance == null) return; try { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.LifeSupp, (byte)(state ? 128 : 16)); } catch { } }
+        private void ToggleComms(bool state) { if (ShipStatus.Instance == null) return; try { if (state) ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Comms, (byte)128); else { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Comms, (byte)16); ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Comms, (byte)17); } } catch { } }
+        private void ToggleLights(bool state)
+        {
+            if (ShipStatus.Instance == null) return;
+            try
+            {
+                if (state)
+                {
+                    byte b = 4;
+                    for (int i = 0; i < 5; i++) if (UnityEngine.Random.value > 0.5f) b |= (byte)(1 << i);
+                    ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Electrical, (byte)(b | 128));
+                }
+                else
+                {
+                    var sys = ShipStatus.Instance.Systems[SystemTypes.Electrical].Cast<SwitchSystem>();
+                    if (sys != null)
+                    {
+                        for (int i = 0; i < 5; i++)
+                        {
+                            bool expected = (sys.ExpectedSwitches & (1 << i)) != 0;
+                            bool actual = (sys.ActualSwitches & (1 << i)) != 0;
+                            if (expected != actual) ShipStatus.Instance.RpcUpdateSystem(SystemTypes.Electrical, (byte)i);
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+        private void SabotageMushroom() { if (ShipStatus.Instance == null) return; try { ShipStatus.Instance.RpcUpdateSystem(SystemTypes.MushroomMixupSabotage, (byte)1); } catch { } }
 
         private void DrawPlayersRoles()
         {
@@ -1544,19 +1652,13 @@ namespace NjordMenu
         {
             GUILayout.BeginVertical(boxStyle);
             GUILayout.Label("MENU CUSTOMIZATION", headerStyle);
-
-            GUILayout.BeginHorizontal();
-            // Вставили плитку вместо текста!
-            if (DrawBindableButton("Menu Toggle Key", "Toggle Menu", 200f)) { }
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(10); // Отступ чтобы не слипалось
+            GUILayout.Space(5);
 
             bool prevRgb = rgbMenuMode;
             rgbMenuMode = DrawToggle(rgbMenuMode, "RGB Menu Mode");
             if (prevRgb && !rgbMenuMode) UpdateAccentColor(menuColors[currentMenuColorIndex]);
 
-            GUILayout.Space(5); // Отступ между тумблерами
+            GUILayout.Space(5);
 
             bool prevBg = enableBackground;
             enableBackground = DrawToggle(enableBackground, "Enable Image Background");
@@ -1839,30 +1941,13 @@ namespace NjordMenu
                         }
                     }
                 }
+                
+
                 catch { }
-                // Keybinds
-                if (bindingAction != "")
-                {
-                    foreach (KeyCode vKey in System.Enum.GetValues(typeof(KeyCode)))
-                        if (Input.GetKeyDown(vKey))
-                        {
-                            if (vKey == KeyCode.Escape) keyBinds.Remove(bindingAction);
-                            else keyBinds[bindingAction] = vKey;
-                            bindingAction = "";
-                            break;
-                        }
-                }
-                else
-                {
-                    if (keyBinds.ContainsKey("Frame Shape") && Input.GetKeyDown(keyBinds["Frame Shape"]))
-                    {
-                        var target = lockedPlayersList.FirstOrDefault(p => p.PlayerId == selectedHydraPlayerId);
-                        if (target != null) this.StartCoroutine(AttemptShapeshiftFrame(target).WrapToIl2Cpp());
-                    }
-                }
+
+
             }
         }
-
 
 
         public void OnGUI()
@@ -2127,7 +2212,7 @@ namespace NjordMenu
                 case 9: return "Xbox";
                 case 10: return "PlayStation";
                 case 112: return "Starlight";
-                default: return $"Unknown ({platformId})"; // Покажет цифровой ID, если платформа кастомная
+                default: return $"Unknown ({platformId})";
             }
         }
         public static Color GetRoleColor(int roleId, Color fallbackColor)
@@ -2205,7 +2290,128 @@ namespace NjordMenu
             }
             catch { }
         }
+        private void DrawHostOnlyTab()
+        {
+            GUILayout.BeginHorizontal();
+            for (int i = 0; i < hostOnlySubTabs.Length; i++)
+                if (GUILayout.Button(hostOnlySubTabs[i], currentHostOnlySubTab == i ? activeSubTabStyle : subTabStyle, GUILayout.Height(18)))
+                { currentHostOnlySubTab = i; scrollPosition = Vector2.zero; }
+            GUILayout.EndHorizontal();
+            GUILayout.Space(8);
+            if (currentHostOnlySubTab == 0) DrawLobbyControls();
+            else if (currentHostOnlySubTab == 1) DrawPlayersRoles();
+        }
 
+        private void DrawLobbyControls()
+        {
+            GUILayout.BeginVertical(boxStyle);
+            GUILayout.Label("LOBBY CONTROLS", headerStyle);
+
+            GUILayout.BeginHorizontal();
+
+            // --- Левая колонка (Настройки Лобби) ---
+            GUILayout.BeginVertical(GUILayout.Width(280));
+            neverEndGame = DrawToggle(neverEndGame, "Unlimited Game", 250);
+            GUILayout.Space(5);
+            noSettingLimit = DrawToggle(noSettingLimit, "No Setting Limit", 250);
+            GUILayout.Space(5);
+            noTaskMode = DrawToggle(noTaskMode, "No Task Mode", 250);
+            GUILayout.Space(5);
+            enableColorCommand = DrawToggle(enableColorCommand, "Enable /c command (Public)", 250);
+            GUILayout.Space(5);
+            blockFortegreenChat = DrawToggle(blockFortegreenChat, "Block Fortegreen Chat", 250);
+            GUILayout.Space(5);
+            blockRainbowChat = DrawToggle(blockRainbowChat, "Block Rainbow Chat", 250);
+            GUILayout.EndVertical();
+
+            GUILayout.Space(10);
+
+            // --- Правая колонка (Сниффер и Фейк Старт) ---
+            GUILayout.BeginVertical(GUILayout.Width(280));
+            LogAllRPCs = DrawToggle(LogAllRPCs, "Sniff All RPCs (On-Screen)", 250);
+            GUILayout.Space(5);
+            EnableCustomNotifs = DrawToggle(EnableCustomNotifs, "Enable Custom UI Notifications", 250);
+
+            GUILayout.Space(5);
+            bool prevTroll = fakeStartCounterTroll;
+            fakeStartCounterTroll = DrawToggle(fakeStartCounterTroll, "Fuck start (Random)", 250);
+            if (fakeStartCounterTroll && !prevTroll) fakeStartCounterCustom = false;
+
+            GUILayout.Space(5);
+            bool prevCustom = fakeStartCounterCustom;
+            fakeStartCounterCustom = DrawToggle(fakeStartCounterCustom, "Fuck start (Custom)", 250);
+            if (fakeStartCounterCustom && !prevCustom) fakeStartCounterTroll = false;
+
+            GUILayout.Space(5);
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(36);
+            string fsDisp = isEditingFakeStart ? fakeStartInput + "_" : fakeStartInput;
+            if (GUILayout.Button(fsDisp, isEditingFakeStart ? activeTabStyle : inputBlockStyle, GUILayout.Width(130), GUILayout.Height(22))) { isEditingFakeStart = !isEditingFakeStart; isEditingName = false; isEditingLevel = false; }
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+
+            // ==========================================
+            // === HOST ACTIONS (РАЗДЕЛЕНО 50/50) ===
+            // ==========================================
+            GUILayout.Space(15);
+            GUILayout.Label("HOST ACTIONS", headerStyle);
+
+            GUILayout.BeginHorizontal();
+
+            // --- ЛЕВАЯ КОЛОНКА (Лобби и Убийства) ---
+            GUILayout.BeginVertical(GUILayout.Width(280));
+            if (GUILayout.Button("Insta Start", btnStyle, GUILayout.Height(25)))
+            { GameStartManager.Instance.startState = GameStartManager.StartingStates.Countdown; GameStartManager.Instance.countDownTimer = 0f; }
+            GUILayout.Space(5);
+            if (GUILayout.Button("Close Meeting", btnStyle, GUILayout.Height(25))) MeetingHud.Instance.RpcClose();
+            GUILayout.Space(5);
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Spawn Lobby", activeTabStyle, GUILayout.Height(25))) SpawnLobby();
+            GUILayout.Space(5);
+            if (GUILayout.Button("Despawn", btnStyle, GUILayout.Height(25))) DespawnLobby();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(5);
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Kill All", btnStyle, GUILayout.Height(25))) KillAll();
+            GUILayout.Space(5);
+            if (GUILayout.Button("Kick All", btnStyle, GUILayout.Height(25))) KickAll();
+            GUILayout.Space(5);
+            if (GUILayout.Button("Frame All", btnStyle, GUILayout.Height(25))) this.StartCoroutine(FrameAllCoroutine().WrapToIl2Cpp());
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+
+            GUILayout.Space(10);
+
+            // --- ПРАВАЯ КОЛОНКА (Smart End Game) ---
+            GUILayout.BeginVertical(GUILayout.Width(280));
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Crewmate Win", btnStyle, GUILayout.Height(25))) SmartEndGame("CrewWin");
+            GUILayout.Space(5);
+            if (GUILayout.Button("Impostor Win", btnStyle, GUILayout.Height(25))) SmartEndGame("ImpWin");
+            GUILayout.EndHorizontal();
+            GUILayout.Space(5);
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Imp Disconnect", btnStyle, GUILayout.Height(25))) SmartEndGame("ImpDisconnect");
+            GUILayout.Space(5);
+            if (GUILayout.Button("H&S Disconnect", activeTabStyle, GUILayout.Height(25))) SmartEndGame("HnsImpDisconnect");
+            GUILayout.EndHorizontal();
+            GUILayout.Space(5);
+
+            if (GUILayout.Button("Force End (Impostor Disconnect)", btnStyle, GUILayout.Height(25)) && GameManager.Instance != null && AmongUsClient.Instance.AmHost)
+            { bool tempNeverEnd = neverEndGame; neverEndGame = false; GameManager.Instance.RpcEndGame((GameOverReason)4, false); neverEndGame = tempNeverEnd; }
+            GUILayout.EndVertical();
+
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+
+            GUILayout.EndVertical(); // Закрываем главный boxStyle
+        }
         public static string GetESPNameTag(NetworkedPlayerInfo info, string originalName)
         {
             if (info == null) return originalName;
