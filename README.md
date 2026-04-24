@@ -14,7 +14,8 @@
 * **Lobby & Host Controls:** Force pre-game roles (without black screens), Smart End Game, unlimited settings, and Spawn/Despawn maps or lobbies on the fly.
 * **Trolling & Fun:** Ride players, spawn massive clone formations (Heart, Snowflake, Pentagram), Rainbow Colors, custom Chat Commands (`/color`, `/w`), and fake animations.
 * **UI Customization:** Fully modular GUI with RGB mode, custom image backgrounds (`MenuBG.png`), and smooth animations.
-<img width="1494" height="752" alt="Снимок экрана 2026-04-21 231703" src="https://github.com/user-attachments/assets/4029f5fe-0c68-42dc-8851-ccb73c4662fe" />
+<img width="1277" height="717" alt="Снимок экрана 2026-04-24 233814" src="https://github.com/user-attachments/assets/83996161-7953-4294-a876-a2c36522527d" />
+
 
 ## 🛡️RPC Sniffer
 
@@ -40,6 +41,7 @@ As NjordMenu is a [BepInEx](https://github.com/BepInEx/BepInEx) mod, you will ne
 
 * Place a file named `MenuBG.png` or `MenuBG.jpg` inside the `BepInEx/config` folder to use a custom background for your mod menu.
 * To change the menu toggle key, click "Bind Key" in the Menu tab and press your desired key.
+<img width="1272" height="742" alt="Снимок экрана 2026-04-24 234205" src="https://github.com/user-attachments/assets/e899091a-9d51-4347-8f7c-7aa997755fb7" />
 
 ## ⚠️ Disclaimer & Caution
 
