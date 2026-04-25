@@ -3461,7 +3461,8 @@ public static class InvertControls_Patch
     private static void SeePlayerVent(PlayerPhysics player)
     {
         #pragma warning disable CS8632
-        if(GameManager.Instance.IsHideAndSeek() && player.myPlayer.Data.RoleType == RoleTypes.Impostor)
+        if(GameManager.Instance.IsHideAndSeek() && player.myPlayer.Data.RoleType == RoleTypes.Impostor || player == null || 
+            AmongUsClient.Instance.GameState != InnerNetClient.GameStates.Started)
                 return;
         if (!SeePlayersInVent)
         {
@@ -3488,7 +3489,6 @@ public static class InvertControls_Patch
 
         if (player.myPlayer.inVent && player.NetId != PlayerControl.LocalPlayer.MyPhysics.NetId)
         {
-            if (GameManager.Instance.IsHideAndSeek() && player.myPlayer.Data.Role.IsImpostor) return;
             player.myPlayer.Visible = true;
             player.myPlayer.invisibilityAlpha = 0.3f;
             player.myPlayer.cosmetics.SetPhantomRoleAlpha(0.3f);
