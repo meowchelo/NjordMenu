@@ -219,6 +219,7 @@ namespace NjordMenu
         public static bool autoOpenDoors = false;
 
         // === Вспомогательные переменные для визуала ===
+        public static bool SeePlayersInVent = false;
         public static bool seeGhosts = false;
         public static bool seeRoles = false;
         public static bool showPlayerInfo = false;
@@ -1109,6 +1110,7 @@ namespace NjordMenu
             GUILayout.Space(5);
             GUILayout.BeginHorizontal();
             RevealVotesEnabled = DrawToggle(RevealVotesEnabled, "Reveal Votes (Meeting)", 210);
+            SeePlayersInVent = DrawToggle(SeePlayersInVent, "See Players In the Vents", 210);
             GUILayout.EndHorizontal();
             GUILayout.Space(5);
             GUILayout.Label("Light Radius", toggleLabelStyle);
@@ -3456,6 +3458,53 @@ namespace NjordMenu
 [HarmonyPatch(typeof(PlayerPhysics), nameof(PlayerPhysics.FixedUpdate))]
 public static class InvertControls_Patch
 {
+    private static void SeePlayerVent(PlayerPhysics player)
+    {
+        #pragma warning disable CS8632
+        if(GameManager.Instance.IsHideAndSeek() && player.myPlayer.Data.RoleType == RoleTypes.Impostor)
+                return;
+        if (!SeePlayersInVent)
+        {
+            if (player.myPlayer.invisibilityAlpha == 0.3f)
+            {
+                PhantomRole? role = player.myPlayer.Data.Role as PhantomRole;
+                if (role != null)
+                {
+                    player.myPlayer.SetInvisibility(role.isInvisible);
+                    return;
+                }
+                else
+                {
+                    player.myPlayer.cosmetics.SetPhantomRoleAlpha(1f);
+                    player.myPlayer.invisibilityAlpha = 1;
+                    if (player.myPlayer.inVent)
+                    {
+                        player.myPlayer.Visible = false;
+                    }
+                }
+            }
+            return;
+        }
+
+        if (player.myPlayer.inVent && player.NetId != PlayerControl.LocalPlayer.MyPhysics.NetId)
+        {
+            if (GameManager.Instance.IsHideAndSeek() && player.myPlayer.Data.Role.IsImpostor) return;
+            player.myPlayer.Visible = true;
+            player.myPlayer.invisibilityAlpha = 0.3f;
+            player.myPlayer.cosmetics.SetPhantomRoleAlpha(0.3f);
+        }
+        else
+        {
+            PhantomRole? role = player.myPlayer.Data.Role as PhantomRole;
+            if (role != null)
+            {
+                player.myPlayer.SetInvisibility(role.isInvisible);
+            }
+            player.myPlayer.cosmetics.SetPhantomRoleAlpha(1f);
+            player.myPlayer.invisibilityAlpha = 1;
+        }
+    }
+
     public static void Postfix(PlayerPhysics __instance)
     {
         // Если это наш игрок, включена инверсия и физика загружена
@@ -3464,6 +3513,8 @@ public static class InvertControls_Patch
             // Переворачиваем вектор скорости
             __instance.body.velocity = -__instance.body.velocity;
         }
+
+        SeePlayerVent(__instance);
     }
 }
 [HarmonyPatch(typeof(LobbyBehaviour), nameof(LobbyBehaviour.Start))]
