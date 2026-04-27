@@ -41,7 +41,7 @@ As NjordMenu is a [BepInEx](https://github.com/BepInEx/BepInEx) mod, you will ne
 
 * Place a file named `MenuBG.png` or `MenuBG.jpg` inside the `BepInEx/config` folder to use a custom background for your mod menu.
 * To change the menu toggle key, click "Bind Key" in the Menu tab and press your desired key.
-<img width="1272" height="742" alt="Снимок экрана 2026-04-24 234205" src="https://github.com/user-attachments/assets/e899091a-9d51-4347-8f7c-7aa997755fb7" />
+<img width="1356" height="796" alt="изображение" src="https://github.com/user-attachments/assets/3ec4d3dc-ee77-40cc-97af-e3ae6e9e9614" />
 
 ## ⚠️ Disclaimer & Caution
 
