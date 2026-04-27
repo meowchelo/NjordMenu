@@ -24,18 +24,42 @@ using static Rewired.UI.ControlMapper.ControlMapper;
 using Color = UnityEngine.Color;
 using Object = UnityEngine.Object;
 using Vector3 = UnityEngine.Vector3;
+using BepInEx.Configuration; //конфиг
 
 namespace NjordMenu
 {
-    [BepInPlugin("com.njord.menu", "NjordMenu", "1.0")]
+    [BepInPlugin("com.njord.menu", "NjordMenu", "1.1.1")]
     public class Plugin : BasePlugin
     {
         public static Plugin Instance { get; private set; } = null!;
+        public static ConfigFile MenuConfig;
+
+        // --- ПЕРЕМЕННЫЕ ДЛЯ ТЕКСТОВОГО КОНФИГА ---
+        public static ConfigEntry<KeyCode> MenuKeybind;
+        public static ConfigEntry<string> SpoofedLevel;
+        public static ConfigEntry<bool> EnablePlatformSpoof;
+        public static ConfigEntry<int> PlatformIndex;
+        public static ConfigEntry<bool> ShowWatermarkConfig;
+        // НОВЫЕ КОНФИГИ
+        public static ConfigEntry<bool> UnlockCosmeticsConfig;
+        public static ConfigEntry<bool> MoreLobbyInfoConfig;
 
         public override void Load()
         {
             Instance = this;
             Log.LogInfo("NjordMenu Loaded!");
+
+            MenuConfig = new ConfigFile(System.IO.Path.Combine(Paths.ConfigPath, "NjordMenu.cfg"), true);
+
+            MenuKeybind = MenuConfig.Bind("NjordMenu.GUI", "Keybind", KeyCode.Insert, "The keyboard key used to toggle the GUI on and off.");
+            SpoofedLevel = MenuConfig.Bind("NjordMenu.Spoofing", "Level", "100", "A custom player level to display to others in online games.");
+            EnablePlatformSpoof = MenuConfig.Bind("NjordMenu.Spoofing", "EnablePlatformSpoof", true, "Enable platform spoofing.");
+            PlatformIndex = MenuConfig.Bind("NjordMenu.Spoofing", "PlatformIndex", 1, "The index of the platform to spoof (0=Epic, 1=Steam, etc).");
+            ShowWatermarkConfig = MenuConfig.Bind("NjordMenu.GUI", "ShowWatermark", true, "Show the NjordMenu watermark in the top right corner.");
+
+            // ИНИЦИАЛИЗИРУЕМ (По дефолту = true)
+            UnlockCosmeticsConfig = MenuConfig.Bind("NjordMenu.General", "UnlockCosmetics", true, "Automatically unlock all cosmetics, pets, and visors.");
+            MoreLobbyInfoConfig = MenuConfig.Bind("NjordMenu.Visuals", "MoreLobbyInfo", true, "Show host, code, and platform in the lobby browser.");
 
             ClassInjector.RegisterTypeInIl2Cpp<NjordMenuGUI>();
 
@@ -48,16 +72,16 @@ namespace NjordMenu
             harmony.PatchAll();
         }
     }
-
     public class NjordMenuGUI : MonoBehaviour
     {
         // === МАССИВЫ ДЛЯ СПУФЕРА (ОБНОВЛЕННЫЕ С GNC И KILLNETWORK) ===
         public static string[] spoofMenuNames = { "NjordMenu", "HostGuard/TOH", "Polar", "BanMod", "Better Among Us", "Sicko Menu", "GNC", "KillNetwork (V1)", "KillNetwork (V2)", "KillNetwork (V3)" };
         public static byte[] spoofMenuRPCs = { 89, 176, 204, 212, 151, 164, 154, 85, 150, 162 };
 
-        // Добавь к остальным переменным (например, рядом с selectedHydraPlayerId)
+       
         public static byte selectedMorphTargetId = 255;
-
+        public static bool unlockCosmetics = true;
+        public static bool moreLobbyInfo = true;
         // === ПЕРЕМЕННЫЕ ДЛЯ БИНДОВ ===
         public static Dictionary<string, KeyCode> keyBinds = new Dictionary<string, KeyCode>();
         public static string bindingAction = "";
@@ -73,10 +97,10 @@ namespace NjordMenu
         public static bool DetailedJoinInfo = true;
         private static List<byte> lastPlayerIds = new List<byte>();
         private static Dictionary<byte, float> pendingJoinTimers = new Dictionary<byte, float>();
-        // --- ДОБАВЛЕННЫЕ ПЕРЕМЕННЫЕ ---
+       
         public static float engineSpeed = 1f;
         public static bool invertControls = false;
-        public static bool autoFollowCursor = false; 
+        public static bool autoFollowCursor = false;
         // === ПЕРЕМЕННЫЕ ДЛЯ НОВЫХ РОЛЕЙ ===
         public static int fakeRoleIdx = 0;
         public static RoleTypes[] forceRoleOptions = { RoleTypes.Crewmate, RoleTypes.Impostor, RoleTypes.Engineer, RoleTypes.Scientist, RoleTypes.Shapeshifter, RoleTypes.GuardianAngel };
@@ -99,13 +123,14 @@ namespace NjordMenu
         public static bool RevealVotesEnabled = false;
 
         // === ЦВЕТА И ФОН ===
-        public static Color currentAccentColor = new Color32(0, 128, 128, 255);
+       
+        public static Color currentAccentColor = new Color(1f, 0.549f, 0f, 1f); // Vivid Orange
         public static bool rgbMenuMode = false;
         private float rgbMenuHue = 0f;
         public static bool enableBackground = false;
         public static Texture2D customMenuBg = null;
         private bool wasShowMenu = false; // Выносим её из метода Update сюда
-        private int currentMenuColorIndex = 0;
+        private int currentMenuColorIndex = 10; // Индекс Vivid Orange в списке
         private string[] menuColorNames = {
             "Njord Blue", "Dark Forest", "Green", "Sea Green", "Mint", "Chartreuse",
             "Sun Yellow", "Marigold", "Old Gold",
@@ -152,7 +177,7 @@ namespace NjordMenu
         public static float customStartTimer = -1f;
 
         // === ПЕРЕМЕННЫЕ ДЛЯ ЦВЕТА ===
-        
+
         public static bool localRainbow = false;
         public static List<byte> rainbowPlayers = new List<byte>();
         public static float colorTimer = 0f;
@@ -191,7 +216,7 @@ namespace NjordMenu
 
         public static bool unlockFeatures = true;
 
-       
+
 
         public class NjordNotification
         {
@@ -210,7 +235,7 @@ namespace NjordMenu
             }
         }
 
-        
+
         // === ПЕРЕМЕННЫЕ РОЛЕЙ И САБОТАЖЕЙ ===
         public static bool killReach = false, killAnyone = false;
         public static bool endlessSsDuration = false, noVitalsCooldown = false;
@@ -233,7 +258,7 @@ namespace NjordMenu
         // === НОВЫЕ ПЕРЕМЕННЫЕ ЧАТА ===
         public static bool alwaysChat = false;       // Always Show Chat
         public static bool readGhostChat = false;    // Read Ghost Chat
-       
+
         // === ПЕРЕМЕННЫЕ ХОСТА (HOST ONLY) ===
         public static bool neverEndGame = false;
         public static void ShowNotification(string text)
@@ -260,8 +285,8 @@ namespace NjordMenu
             if (!EnableCustomNotifs) return;
             screenNotifications.Add(new NjordNotification(title, message, ttl));
         }
-  
-  
+
+
 
         public static HashSet<byte> forcedImpostors = new HashSet<byte>();
         public static Dictionary<byte, RoleTypes> forcedPreGameRoles = new Dictionary<byte, RoleTypes>();
@@ -281,7 +306,7 @@ namespace NjordMenu
         public static List<NjordNotification> screenNotifications = new List<NjordNotification>();
 
         // === ПЕРЕМЕННЫЕ ДЛЯ ОТСЛЕЖИВАНИЯ ИГРОКОВ (ВХОД/ВЫХОД) ===
-       
+
 
         // === СТИЛИ ===
         private bool stylesInited = false;
@@ -291,7 +316,7 @@ namespace NjordMenu
         private GUIStyle sliderStyle, sliderThumbStyle, subTabStyle, activeSubTabStyle;
         public GUIStyle inputBlockStyle;
         private Texture2D texWindowBg, texBoxBg, texBtnBg, texAccent, texSidebarBg;
-        private Texture2D texToggleOff, texToggleOn, texSliderBg, texSliderThumb, texInputBg;
+        private Texture2D texToggleOff, texToggleOn, texSliderBg, texSliderThumb, texInputBg, texColorBtn; // <-- Добавлено texColorBtn
 
         // ==========================================
         // === МЕТОДЫ ДЛЯ КОМАНД /w И /color ===
@@ -474,21 +499,26 @@ namespace NjordMenu
         // ==========================================
         // === СОХРАНЕНИЕ НАСТРОЕК (Spoof Level & Platform) ===
         // ==========================================
+        // Добавь это к переменным:
+        public static bool showWatermark = true;
+
         private void SaveConfig()
         {
             try
             {
-                PlayerPrefs.SetString("M_SpoofLevel", spoofLevelString);
-                PlayerPrefs.SetString("M_SpoofName", customNameInput); // Сохраняем кастомное имя
-                PlayerPrefs.SetInt("M_PlatSpoof", enablePlatformSpoof ? 1 : 0);
-                PlayerPrefs.SetInt("M_PlatIdx", currentPlatformIndex);
+                Plugin.SpoofedLevel.Value = spoofLevelString;
+                Plugin.EnablePlatformSpoof.Value = enablePlatformSpoof;
+                Plugin.PlatformIndex.Value = currentPlatformIndex;
+                Plugin.ShowWatermarkConfig.Value = showWatermark;
+                Plugin.UnlockCosmeticsConfig.Value = unlockCosmetics;
+                Plugin.MoreLobbyInfoConfig.Value = moreLobbyInfo;
 
-                // СОХРАНЯЕМ КНОПКУ МЕНЮ
                 if (keyBinds.ContainsKey("Toggle Menu"))
-                {
-                    PlayerPrefs.SetInt("M_ToggleKey", (int)keyBinds["Toggle Menu"]);
-                }
+                    Plugin.MenuKeybind.Value = keyBinds["Toggle Menu"];
 
+                Plugin.MenuConfig.Save();
+
+                PlayerPrefs.SetString("M_SpoofName", customNameInput);
                 PlayerPrefs.Save();
             }
             catch { }
@@ -498,20 +528,15 @@ namespace NjordMenu
         {
             try
             {
-                if (PlayerPrefs.HasKey("M_SpoofLevel")) spoofLevelString = PlayerPrefs.GetString("M_SpoofLevel");
-                if (PlayerPrefs.HasKey("M_SpoofName")) customNameInput = PlayerPrefs.GetString("M_SpoofName"); // Загружаем кастомное имя
-                if (PlayerPrefs.HasKey("M_PlatSpoof")) enablePlatformSpoof = PlayerPrefs.GetInt("M_PlatSpoof") == 1;
-                if (PlayerPrefs.HasKey("M_PlatIdx")) currentPlatformIndex = PlayerPrefs.GetInt("M_PlatIdx");
+                spoofLevelString = Plugin.SpoofedLevel.Value;
+                enablePlatformSpoof = Plugin.EnablePlatformSpoof.Value;
+                currentPlatformIndex = Plugin.PlatformIndex.Value;
+                showWatermark = Plugin.ShowWatermarkConfig.Value;
+                unlockCosmetics = Plugin.UnlockCosmeticsConfig.Value;
+                moreLobbyInfo = Plugin.MoreLobbyInfoConfig.Value;
 
-                // ЗАГРУЖАЕМ КНОПКУ МЕНЮ
-                if (PlayerPrefs.HasKey("M_ToggleKey"))
-                {
-                    keyBinds["Toggle Menu"] = (KeyCode)PlayerPrefs.GetInt("M_ToggleKey");
-                }
-                else
-                {
-                    keyBinds["Toggle Menu"] = KeyCode.Insert;
-                }
+                keyBinds["Toggle Menu"] = Plugin.MenuKeybind.Value;
+                if (PlayerPrefs.HasKey("M_SpoofName")) customNameInput = PlayerPrefs.GetString("M_SpoofName");
             }
             catch { }
         }
@@ -651,7 +676,7 @@ namespace NjordMenu
             texSliderBg = MakeRoundedTex(64, sliderBgCol, 4f);
             texSliderThumb = MakeRoundedTex(20, currentAccentColor, 10f);
             texInputBg = MakeRoundedTex(64, new Color(0.08f, 0.08f, 0.08f, 0.85f), 6f);
-
+            texColorBtn = MakeRoundedTex(64, Color.white, 12f);
             texToggleOff = new Texture2D(30, 16, TextureFormat.RGBA32, false); texToggleOff.hideFlags = HideFlags.HideAndDontSave;
             texToggleOn = new Texture2D(30, 16, TextureFormat.RGBA32, false); texToggleOn.hideFlags = HideFlags.HideAndDontSave;
             UpdateSwitchTex(texToggleOff, false, Color.white);
@@ -875,22 +900,24 @@ namespace NjordMenu
             GUILayout.Label("INFORMATION & HOTKEYS", headerStyle);
             GUILayout.Space(10);
 
-            GUIStyle textStyle = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true, fontSize = 13 };
+            
+            GUIStyle textStyle = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true, fontSize = 12 };
 
-            string title = ApplyMenuShimmer("Welcome to NjordMenu v1.0!");
+            string title = ApplyMenuShimmer("Welcome to NjordMenu v1.1.1!");
             string subtitle = "<color=#aaaaaa><b>(Meowch Logic Edition)</b></color>";
 
+            // ору я убрал нахуй упоминание бинда морфа , я хз че оно тут забыло 
             string infoText = $"<size=16><b>{title}</b></size>\n{subtitle}\n\n" +
-                $"<color=#FFFFFF>NjordMenu is a multi-functional tool created by <b>Meowchelo</b>. " +
-                $"This updated version integrates the premium UI and advanced features from the Meowch Client.</color>\n\n" +
-                $"<b><color=#FFAC1C>📌 HOTKEYS:</color></b>\n" +
-                $"• <b>[Insert]</b> or <b>[Right Shift]</b> — Open / Close Menu\n" +
-                $"• <b>[ M ]</b> — Quick Morph Selected Target\n" +
-                $"• <b>[ Right Click ]</b> — Teleport to Cursor (if enabled)\n\n" +
-                $"<b><color=#00FF00>🛡️ SAFE PLAY:</color></b>\n" +
-                $"Please respect other players. Use aggressive features (like Kill All or Force Roles) only in private lobbies with friends.\n\n" +
-                $"<b><color=#FF0000>⚠️ RISKS:</color></b>\n" +
-                $"Abusing these features in public games can lead to reports and account bans. Play smart!";
+                 $"<b><color=#FFAC1C>📌 HOTKEYS:</color></b>\n" +
+                 $"• <b>[Insert]</b> or <b>[Right Shift]</b> — Open / Close Menu\n" +
+                 $"• <b>[ Right Click ]</b> — Teleport to Cursor\n" +
+                 $"• <b>[ F9 ]</b> — Magnet Cursor (Auto Follow)\n\n" +
+                 $"<b><color=#FF0000>⚠️ DISCLAIMER & CAUTION:</color></b>\n" +
+                 $"<color=#dddddd>NjordMenu should NEVER, under any circumstances, be used to impair the experiences of other legitimate players. If you use some of the trolling, crashing, or forceful features, please make sure you are doing so in a private lobby with consenting friends. You are free to join public lobbies with NjordMenu enabled as long as you use it with the intention of improving your own game (e.g., using the Anticheat, ESP, or QoL features). With great power comes great responsibility!</color>\n\n" +
+                 $"<color=#dddddd>I recognize that utility mods like NjordMenu open the door for malicious users to cause destruction. Even with safeguards, there is always a chance for abuse. All I can do is ask you, the person using this mod, to please do not use NjordMenu for malicious purposes and follow the Innersloth Code of Conduct.</color>\n\n" +
+                 $"<color=#FF5555>If you fail to follow this suggestion, do not expect to receive any kind of support. Your account may be sanctioned or banned by Innersloth, resulting in the loss of your friends list, unlocked cosmetics, and purchases.</color>\n\n" +
+                 $"<b><color=#00FF00>Have a great game and enjoy the mod♡! 🎮✨</color></b>\n\n" +
+                 $"<size=10><color=#777777>This mod is not affiliated with Among Us or Innersloth LLC, and the content contained therein is not endorsed or otherwise sponsored by Innersloth LLC. Portions of the materials contained herein are property of Innersloth LLC. © Innersloth LLC.</color></size>";
 
             GUILayout.Label(infoText, textStyle);
             GUILayout.FlexibleSpace();
@@ -1223,18 +1250,20 @@ namespace NjordMenu
                     if (lockedPlayersList.Count > 0) { mIdx++; if (mIdx >= lockedPlayersList.Count) mIdx = 0; selectedMorphTargetId = lockedPlayersList[mIdx].PlayerId; }
                 }
                 GUILayout.EndHorizontal();
-
-                // АККУРАТНАЯ КНОПКА МОРФА ПО ЦЕНТРУ
+                // МОРФ
                 GUILayout.Space(5);
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
-                GUI.backgroundColor = new Color(1f, 0.5f, 0f, 1f);
+
+                // Делаем кнопку морфа под выбранный цвет меню
+                GUI.backgroundColor = currentAccentColor;
                 if (GUILayout.Button("MORPH TARGET", btnStyle, GUILayout.Width(160), GUILayout.Height(25)))
                 {
                     var morphTarget = lockedPlayersList.FirstOrDefault(p => p.PlayerId == selectedMorphTargetId) ?? target;
                     this.StartCoroutine(AttemptShapeshiftFrame(target, morphTarget).WrapToIl2Cpp());
                 }
                 GUI.backgroundColor = Color.white;
+
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
 
@@ -1242,16 +1271,28 @@ namespace NjordMenu
                 GUILayout.Space(15);
                 GUILayout.Label("SET PLAYER COLOR", headerStyle);
                 GUILayout.BeginVertical(boxStyle);
-                GUIStyle brightColorStyle = new GUIStyle(btnStyle) { normal = { background = Texture2D.whiteTexture } };
+
+                // Создаем абсолютно чистый стиль БЕЗ теней стандартных кнопок Unity
+                GUIStyle roundedColorBtnStyle = new GUIStyle();
+                roundedColorBtnStyle.normal.background = texColorBtn;
+                roundedColorBtnStyle.margin = CreateRectOffset(2, 2, 2, 2);
+
                 int colorsPerRow = 7;
                 for (int i = 0; i < Palette.PlayerColors.Length; i++)
                 {
                     if (i % colorsPerRow == 0) GUILayout.BeginHorizontal();
-                    GUI.backgroundColor = Palette.PlayerColors[i];
-                    if (GUILayout.Button("", brightColorStyle, GUILayout.Width(35), GUILayout.Height(30))) target.RpcSetColor((byte)i);
-                    if (i % colorsPerRow == colorsPerRow - 1 || i == Palette.PlayerColors.Length - 1) GUILayout.EndHorizontal();
+
+                    // Используем GUI.color вместо backgroundColor, чтобы цвета не становились темными
+                    GUI.color = Palette.PlayerColors[i];
+
+                    if (GUILayout.Button("", roundedColorBtnStyle, GUILayout.Width(32), GUILayout.Height(30)))
+                        target.RpcSetColor((byte)i);
+
+                    if (i % colorsPerRow == colorsPerRow - 1 || i == Palette.PlayerColors.Length - 1)
+                        GUILayout.EndHorizontal();
                 }
-                GUI.backgroundColor = Color.white;
+                // Обязательно сбрасываем GUI.color обратно в белый, чтобы не покрасить все меню!
+                GUI.color = Color.white;
                 GUILayout.EndVertical();
 
                 // --- PRE-GAME ROLES (HOST) ---
@@ -1943,7 +1984,7 @@ namespace NjordMenu
                         }
                     }
                 }
-                
+
 
                 catch { }
 
@@ -2149,8 +2190,8 @@ namespace NjordMenu
                 GUI.color = Color.white;
             }
 
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(ApplyMenuShimmer("NjordMenu v1.0"), titleStyle);
+          GUILayout.BeginHorizontal();
+            GUILayout.Label(ApplyMenuShimmer("NjordMenu v1.1.1"), titleStyle);
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("-", new GUIStyle(btnStyle) { fixedWidth = 20, fixedHeight = 18, margin = CreateRectOffset(0, 8, 6, 0) })) showMenu = false;
             GUILayout.EndHorizontal();
@@ -2442,60 +2483,72 @@ namespace NjordMenu
                     if (client != null) { platform = GetPlatform(client); if (AmongUsClient.Instance.GetHost() == client) hostStr = "Host - "; }
                 }
                 catch { }
-                newName = $"<size=80%><color=#FFAC1C>{hostStr}Lv:{level} - {platform}</color></size>\n{newName}";
+
+                // ДИНАМИЧЕСКИЙ ЦВЕТ ИЗ МЕНЮ
+                string accentHex = ColorUtility.ToHtmlStringRGB(currentAccentColor);
+                newName = $"<size=80%><color=#{accentHex}>{hostStr}Lv:{level} - {platform}</color></size>\n{newName}";
             }
             return newName;
         }
-    }
 
-    // ==========================================
-    // === ПАТЧИ ===
-    // ==========================================
 
-    [HarmonyPatch(typeof(VersionShower), nameof(VersionShower.Start))]
+        // ==========================================
+        // === ПАТЧИ ===
+        // ==========================================
+
+        [HarmonyPatch(typeof(VersionShower), nameof(VersionShower.Start))]
     public static class VersionShower_Start_Patch
     {
         public static void Postfix(VersionShower __instance) { if (__instance != null && __instance.text != null) __instance.text.text = NjordMenuGUI.ApplyMenuShimmer("NjordMenu By Meowchelo"); }
     }
 
-    [HarmonyPatch(typeof(PingTracker), nameof(PingTracker.Update))]
-    public static class PingTracker_Watermark_Patch
-    {
-        private static float _smoothFps = 0f;
-        private static int _smoothPing = 0;
-        private static float _updateTimer = 0f;
-        public static void Postfix(PingTracker __instance)
+        [HarmonyPatch(typeof(PingTracker), nameof(PingTracker.Update))]
+        public static class PingTracker_Watermark_Patch
         {
-            try
+            private static float _smoothFps = 0f;
+            private static int _smoothPing = 0;
+            private static float _updateTimer = 0f;
+            public static void Postfix(PingTracker __instance)
             {
-                _updateTimer += Time.deltaTime;
-                if (_updateTimer >= 0.5f) { _smoothFps = 1f / Time.deltaTime; if (AmongUsClient.Instance != null) _smoothPing = AmongUsClient.Instance.Ping; _updateTimer = 0f; }
-                int num = Mathf.RoundToInt(_smoothFps);
-                string pingColor = ((_smoothPing < 80) ? "#00FF00" : ((_smoothPing < 400) ? "#FFFF00" : "#FF0000"));
-                string shimmerTitle = NjordMenuGUI.ApplyMenuShimmer("NjordMenu By Meowchelo ");
-                string finalString = $"{shimmerTitle} • <color=#FFFFFF>PING:</color> <color={pingColor}>{_smoothPing} ms</color> • <color=#FFFFFF>FPS:</color> <color=#FFFFFF>{num}</color>";
-                if (AmongUsClient.Instance != null)
+                try
                 {
-                    ClientData host = AmongUsClient.Instance.GetHost();
-                    if (host != null && host.Character != null)
-                    {
-                        string hostName = host.Character.Data.PlayerName ?? "Unknown";
-                        string shimmerHostName = NjordMenuGUI.ApplyMenuShimmer(hostName);
-                        finalString += $" • <color=#FFFFFF>Host:</color> {shimmerHostName}";
-                        if (AmongUsClient.Instance.AmHost) finalString += " <color=#00FF00>(You)</color>";
-                    }
-                }
-                __instance.text.text = finalString;
-                __instance.text.alignment = TMPro.TextAlignmentOptions.Center;
-                __instance.aspectPosition.enabled = false;
-                float zPos = MeetingHud.Instance != null && MeetingHud.Instance.gameObject.activeInHierarchy ? -100f : -10f;
-                __instance.transform.localPosition = new Vector3(0f, -2.3f, zPos);
-            }
-            catch { }
-        }
-    }
+                    _updateTimer += Time.deltaTime;
+                    if (_updateTimer >= 0.5f) { _smoothFps = 1f / Time.deltaTime; if (AmongUsClient.Instance != null) _smoothPing = AmongUsClient.Instance.Ping; _updateTimer = 0f; }
+                    int num = Mathf.RoundToInt(_smoothFps);
+                    string pingColor = ((_smoothPing < 80) ? "#00FF00" : ((_smoothPing < 400) ? "#FFFF00" : "#FF0000"));
 
-    [HarmonyPatch(typeof(GameStartManager), nameof(GameStartManager.Update))]
+                    // Формируем базовую строку пинга
+                    string finalString = $"<color=#FFFFFF>PING:</color> <color={pingColor}>{_smoothPing} ms</color> • <color=#FFFFFF>FPS:</color> <color=#FFFFFF>{num}</color>";
+
+                    // ДОБАВЛЯЕМ ЛОГИКУ ВОТЕРМАРКИ
+                    if (NjordMenuGUI.showWatermark)
+                    {
+                        string shimmerTitle = NjordMenuGUI.ApplyMenuShimmer("NjordMenu By Meowchelo ");
+                        finalString = $"{shimmerTitle} • " + finalString;
+                    }
+
+                    if (AmongUsClient.Instance != null)
+                    {
+                        ClientData host = AmongUsClient.Instance.GetHost();
+                        if (host != null && host.Character != null)
+                        {
+                            string hostName = host.Character.Data.PlayerName ?? "Unknown";
+                            string shimmerHostName = NjordMenuGUI.ApplyMenuShimmer(hostName);
+                            finalString += $" • <color=#FFFFFF>Host:</color> {shimmerHostName}";
+                            if (AmongUsClient.Instance.AmHost) finalString += " <color=#00FF00>(You)</color>";
+                        }
+                    }
+                    __instance.text.text = finalString;
+                    __instance.text.alignment = TMPro.TextAlignmentOptions.Center;
+                    __instance.aspectPosition.enabled = false;
+                    float zPos = MeetingHud.Instance != null && MeetingHud.Instance.gameObject.activeInHierarchy ? -100f : -10f;
+                    __instance.transform.localPosition = new Vector3(0f, -2.3f, zPos);
+                }
+                catch { }
+            }
+        }
+
+        [HarmonyPatch(typeof(GameStartManager), nameof(GameStartManager.Update))]
     public static class GameStartManager_Update_Patch
     {
         public static void Postfix(GameStartManager __instance)
@@ -2503,7 +2556,7 @@ namespace NjordMenu
             if (AmongUsClient.Instance == null || !AmongUsClient.Instance.AmHost || PlayerControl.LocalPlayer == null) return;
             if (NjordMenuGUI.fakeStartCounterTroll)
             {
-                try { sbyte[] arr = { -123, -100, -69, -42, 0, 42, 69, 100, 123 }; sbyte b = arr[UnityEngine.Random.Range(0, arr.Length)]; PlayerControl.LocalPlayer.RpcSetStartCounter(b); __instance.SetStartCounter(b); } catch { }
+                try { sbyte[] arr = { -123, -111, -100, -69, -67, -52, -42, 0, 42, 52, 67, 69, 100, 111, 123 }; sbyte b = arr[UnityEngine.Random.Range(0, arr.Length)]; PlayerControl.LocalPlayer.RpcSetStartCounter(b); __instance.SetStartCounter(b); } catch { }
             }
             else if (NjordMenuGUI.fakeStartCounterCustom && int.TryParse(NjordMenuGUI.fakeStartInput, out int custom))
             {
@@ -2746,31 +2799,34 @@ namespace NjordMenu
             catch { }
         }
     }
-
-    [HarmonyPatch(typeof(ChatBubble), nameof(ChatBubble.SetName))]
-    public static class ChatBubble_SetName_Patch
-    {
-        public static void Postfix(ChatBubble __instance)
+        [HarmonyPatch(typeof(ChatBubble), nameof(ChatBubble.SetName))]
+        public static class ChatBubble_SetName_Patch
         {
-            if (!NjordMenuGUI.showPlayerInfo || __instance.playerInfo == null) return;
-            try
+            public static void Postfix(ChatBubble __instance)
             {
-                int level = 0; string platform = "Unknown"; string hostStr = "";
-                try { level = (int)__instance.playerInfo.PlayerLevel + 1; } catch { }
+                if (!NjordMenuGUI.showPlayerInfo || __instance.playerInfo == null) return;
                 try
                 {
-                    var client = AmongUsClient.Instance.GetClientFromPlayerInfo(__instance.playerInfo);
-                    if (client != null) { platform = NjordMenuGUI.GetPlatform(client); if (AmongUsClient.Instance.GetHost() == client) hostStr = "Host - "; }
+                    int level = 0; string platform = "Unknown"; string hostStr = "";
+                    try { level = (int)__instance.playerInfo.PlayerLevel + 1; } catch { }
+                    try
+                    {
+                        var client = AmongUsClient.Instance.GetClientFromPlayerInfo(__instance.playerInfo);
+                        if (client != null) { platform = NjordMenuGUI.GetPlatform(client); if (AmongUsClient.Instance.GetHost() == client) hostStr = "Host - "; }
+                    }
+                    catch { }
+
+                    // ДИНАМИЧЕСКИЙ ЦВЕТ ИЗ МЕНЮ ДЛЯ ЧАТА
+                    string accentHex = ColorUtility.ToHtmlStringRGB(NjordMenuGUI.currentAccentColor);
+                    string extra = $" <color=#{accentHex}><size=80%>{hostStr}Lv:{level} - {platform}</size></color>";
+
+                    if (!__instance.NameText.text.Contains("Lv:")) __instance.NameText.text += extra;
                 }
                 catch { }
-                string extra = $" <color=#FFAC1C><size=80%>{hostStr}Lv:{level} - {platform}</size></color>";
-                if (!__instance.NameText.text.Contains("Lv:")) __instance.NameText.text += extra;
             }
-            catch { }
         }
-    }
 
-    [HarmonyPatch(typeof(HudManager), nameof(HudManager.Update))]
+   [HarmonyPatch(typeof(HudManager), nameof(HudManager.Update))]
     public static class FullBright_Patch
     {
         public static void Postfix(HudManager __instance) { if (__instance.ShadowQuad != null) __instance.ShadowQuad.gameObject.SetActive(!NjordMenuGUI.fullBright); }
@@ -3189,270 +3245,270 @@ namespace NjordMenu
 
 
 [HarmonyPatch(typeof(ChatController), nameof(ChatController.Update))]
-    public static class ChatController_Update_Patch
+public static class ChatController_Update_Patch
+{
+    public static void Postfix(ChatController __instance)
     {
-        public static void Postfix(ChatController __instance)
+        try
         {
-            try
+            if (__instance.freeChatField != null && __instance.freeChatField.background != null)
             {
-                if (__instance.freeChatField != null && __instance.freeChatField.background != null)
+                __instance.freeChatField.background.color = new Color32(40, 40, 40, byte.MaxValue);
+                if (__instance.freeChatField.textArea != null && __instance.freeChatField.textArea.outputText != null)
+                    __instance.freeChatField.textArea.outputText.color = Color.white;
+            }
+            if (__instance.quickChatField != null && __instance.quickChatField.background != null)
+            {
+                __instance.quickChatField.background.color = new Color32(40, 40, 40, byte.MaxValue);
+                if (__instance.quickChatField.text != null)
+                    __instance.quickChatField.text.color = Color.white;
+            }
+        }
+        catch { }
+    }
+}
+
+[HarmonyPatch(typeof(ChatBubble), nameof(ChatBubble.SetText))]
+public static class DarkMode_ChatBubblePatch
+{
+    public static void Postfix(ChatBubble __instance)
+    {
+        try
+        {
+            Transform bg = __instance.transform.Find("Background");
+            if (bg != null)
+            {
+                var sr = bg.GetComponent<SpriteRenderer>();
+                if (sr != null) sr.color = new Color32(0, 0, 0, 128);
+            }
+            if (__instance.TextArea != null)
+                __instance.TextArea.color = Color.white;
+        }
+        catch { }
+    }
+}
+
+[HarmonyPatch(typeof(GameManager), nameof(GameManager.CheckTaskCompletion))]
+public static class GameManager_CheckTaskCompletion_Patch
+{
+    public static bool Prefix(ref bool __result)
+    {
+        try
+        {
+            if (!NjordMenuGUI.neverEndGame) return true;
+            __result = false; return false;
+        }
+        catch { return true; }
+    }
+}
+
+[HarmonyPatch(typeof(ChatController), nameof(ChatController.SetVisible))]
+public static class ChatController_SetVisible_Patch
+{
+    public static void Prefix(ref bool visible)
+    {
+        if (NjordMenuGUI.alwaysChat) visible = true;
+    }
+}
+
+// Reveal Votes
+[HarmonyPatch(typeof(MeetingHud), "Update")]
+public static class RevealVotesPatch
+{
+    internal static List<int> _votedPlayers = new List<int>();
+    public static void Prefix(MeetingHud __instance)
+    {
+        if (!NjordMenuGUI.RevealVotesEnabled) return;
+        try
+        {
+            if ((int)__instance.state >= 4) return;
+            foreach (var item in __instance.playerStates)
+            {
+                if (item == null) continue;
+                var playerById = GameData.Instance.GetPlayerById(item.TargetPlayerId);
+                if (playerById == null || playerById.Disconnected || item.VotedFor == PlayerVoteArea.HasNotVoted ||
+                    item.VotedFor == PlayerVoteArea.MissedVote || item.VotedFor == PlayerVoteArea.DeadVote || _votedPlayers.Contains(item.TargetPlayerId)) continue;
+                _votedPlayers.Add(item.TargetPlayerId);
+                if (item.VotedFor != PlayerVoteArea.SkippedVote)
                 {
-                    __instance.freeChatField.background.color = new Color32(40, 40, 40, byte.MaxValue);
-                    if (__instance.freeChatField.textArea != null && __instance.freeChatField.textArea.outputText != null)
-                        __instance.freeChatField.textArea.outputText.color = Color.white;
+                    foreach (var item2 in __instance.playerStates) if (item2.TargetPlayerId == item.VotedFor) { __instance.BloopAVoteIcon(playerById, 0, item2.transform); break; }
                 }
-                if (__instance.quickChatField != null && __instance.quickChatField.background != null)
+                else if (__instance.SkippedVoting != null) __instance.BloopAVoteIcon(playerById, 0, __instance.SkippedVoting.transform);
+            }
+            foreach (var item3 in __instance.playerStates)
+            {
+                if (item3 == null) continue;
+                var component = item3.transform.GetComponent<VoteSpreader>();
+                if (component != null) foreach (var sprite in component.Votes) sprite.gameObject.SetActive(true);
+            }
+            if (__instance.SkippedVoting != null) __instance.SkippedVoting.SetActive(true);
+        }
+        catch { }
+    }
+}
+[HarmonyPatch(typeof(MeetingHud), "PopulateResults")]
+public static class RevealVotesCleanupPatch
+{
+    public static void Prefix(MeetingHud __instance)
+    {
+        if (!NjordMenuGUI.RevealVotesEnabled) return;
+        try
+        {
+            foreach (var item in __instance.playerStates)
+            {
+                if (item == null) continue;
+                var component = item.transform.GetComponent<VoteSpreader>();
+                if (component != null && component.Votes.Count != 0)
                 {
-                    __instance.quickChatField.background.color = new Color32(40, 40, 40, byte.MaxValue);
-                    if (__instance.quickChatField.text != null)
-                        __instance.quickChatField.text.color = Color.white;
+                    foreach (var sprite in component.Votes) Object.DestroyImmediate(sprite.gameObject);
+                    component.Votes.Clear();
                 }
             }
-            catch { }
+            RevealVotesPatch._votedPlayers.Clear();
         }
+        catch { }
     }
+}
 
-    [HarmonyPatch(typeof(ChatBubble), nameof(ChatBubble.SetText))]
-    public static class DarkMode_ChatBubblePatch
+// ==========================================
+// === НОВЫЕ ПАТЧИ: NO SETTING LIMITS ===
+// ==========================================
+[HarmonyPatch(typeof(NumberOption), nameof(NumberOption.Increase))]
+public static class NumberOption_Increase_Patch
+{
+    public static bool Prefix(NumberOption __instance)
     {
-        public static void Postfix(ChatBubble __instance)
+        try
         {
-            try
-            {
-                Transform bg = __instance.transform.Find("Background");
-                if (bg != null)
-                {
-                    var sr = bg.GetComponent<SpriteRenderer>();
-                    if (sr != null) sr.color = new Color32(0, 0, 0, 128);
-                }
-                if (__instance.TextArea != null)
-                    __instance.TextArea.color = Color.white;
-            }
-            catch { }
-        }
-    }
-
-    [HarmonyPatch(typeof(GameManager), nameof(GameManager.CheckTaskCompletion))]
-    public static class GameManager_CheckTaskCompletion_Patch
-    {
-        public static bool Prefix(ref bool __result)
-        {
-            try
-            {
-                if (!NjordMenuGUI.neverEndGame) return true;
-                __result = false; return false;
-            }
-            catch { return true; }
-        }
-    }
-
-    [HarmonyPatch(typeof(ChatController), nameof(ChatController.SetVisible))]
-    public static class ChatController_SetVisible_Patch
-    {
-        public static void Prefix(ref bool visible)
-        {
-            if (NjordMenuGUI.alwaysChat) visible = true;
-        }
-    }
-
-    // Reveal Votes
-    [HarmonyPatch(typeof(MeetingHud), "Update")]
-    public static class RevealVotesPatch
-    {
-        internal static List<int> _votedPlayers = new List<int>();
-        public static void Prefix(MeetingHud __instance)
-        {
-            if (!NjordMenuGUI.RevealVotesEnabled) return;
-            try
-            {
-                if ((int)__instance.state >= 4) return;
-                foreach (var item in __instance.playerStates)
-                {
-                    if (item == null) continue;
-                    var playerById = GameData.Instance.GetPlayerById(item.TargetPlayerId);
-                    if (playerById == null || playerById.Disconnected || item.VotedFor == PlayerVoteArea.HasNotVoted ||
-                        item.VotedFor == PlayerVoteArea.MissedVote || item.VotedFor == PlayerVoteArea.DeadVote || _votedPlayers.Contains(item.TargetPlayerId)) continue;
-                    _votedPlayers.Add(item.TargetPlayerId);
-                    if (item.VotedFor != PlayerVoteArea.SkippedVote)
-                    {
-                        foreach (var item2 in __instance.playerStates) if (item2.TargetPlayerId == item.VotedFor) { __instance.BloopAVoteIcon(playerById, 0, item2.transform); break; }
-                    }
-                    else if (__instance.SkippedVoting != null) __instance.BloopAVoteIcon(playerById, 0, __instance.SkippedVoting.transform);
-                }
-                foreach (var item3 in __instance.playerStates)
-                {
-                    if (item3 == null) continue;
-                    var component = item3.transform.GetComponent<VoteSpreader>();
-                    if (component != null) foreach (var sprite in component.Votes) sprite.gameObject.SetActive(true);
-                }
-                if (__instance.SkippedVoting != null) __instance.SkippedVoting.SetActive(true);
-            }
-            catch { }
-        }
-    }
-    [HarmonyPatch(typeof(MeetingHud), "PopulateResults")]
-    public static class RevealVotesCleanupPatch
-    {
-        public static void Prefix(MeetingHud __instance)
-        {
-            if (!NjordMenuGUI.RevealVotesEnabled) return;
-            try
-            {
-                foreach (var item in __instance.playerStates)
-                {
-                    if (item == null) continue;
-                    var component = item.transform.GetComponent<VoteSpreader>();
-                    if (component != null && component.Votes.Count != 0)
-                    {
-                        foreach (var sprite in component.Votes) Object.DestroyImmediate(sprite.gameObject);
-                        component.Votes.Clear();
-                    }
-                }
-                RevealVotesPatch._votedPlayers.Clear();
-            }
-            catch { }
-        }
-    }
-
-    // ==========================================
-    // === НОВЫЕ ПАТЧИ: NO SETTING LIMITS ===
-    // ==========================================
-    [HarmonyPatch(typeof(NumberOption), nameof(NumberOption.Increase))]
-    public static class NumberOption_Increase_Patch
-    {
-        public static bool Prefix(NumberOption __instance)
-        {
-            try
-            {
-                if (!NjordMenuGUI.noSettingLimit) return true;
-                if (GameOptionsManager.Instance.CurrentGameOptions.GameMode != GameModes.HideNSeek &&
-                    (__instance.Title == StringNames.GameNumImpostors || __instance.Title == StringNames.GamePlayerSpeed))
-                    return true;
-                __instance.Value += __instance.Increment;
-                __instance.UpdateValue();
-                __instance.OnValueChanged.Invoke(__instance);
-                __instance.AdjustButtonsActiveState();
-                return false;
-            }
-            catch { return true; }
-        }
-    }
-
-    [HarmonyPatch(typeof(NumberOption), nameof(NumberOption.Decrease))]
-    public static class NumberOption_Decrease_Patch
-    {
-        public static bool Prefix(NumberOption __instance)
-        {
-            try
-            {
-                if (!NjordMenuGUI.noSettingLimit) return true;
-                if (GameOptionsManager.Instance.CurrentGameOptions.GameMode != GameModes.HideNSeek &&
-                    (__instance.Title == StringNames.GameNumImpostors || __instance.Title == StringNames.GamePlayerSpeed))
-                    return true;
-                __instance.Value -= __instance.Increment;
-                __instance.UpdateValue();
-                __instance.OnValueChanged.Invoke(__instance);
-                __instance.AdjustButtonsActiveState();
-                return false;
-            }
-            catch { return true; }
-        }
-    }
-
-    [HarmonyPatch(typeof(NumberOption), nameof(NumberOption.Initialize))]
-    public static class NumberOption_Initialize_Patch
-    {
-        public static void Postfix(NumberOption __instance)
-        {
-            try
-            {
-                if (!NjordMenuGUI.noSettingLimit) return;
-                if (GameOptionsManager.Instance.CurrentGameOptions.GameMode != GameModes.HideNSeek &&
-                    (__instance.Title == StringNames.GameNumImpostors || __instance.Title == StringNames.GamePlayerSpeed))
-                    return;
-                __instance.ValidRange = new FloatRange(-999f, 999f);
-            }
-            catch { }
-        }
-    }
-
-    [HarmonyPatch(typeof(IGameOptionsExtensions), nameof(IGameOptionsExtensions.GetAdjustedNumImpostors))]
-    public static class IGameOptionsExtensions_GetAdjustedNumImpostors_Patch
-    {
-        public static bool Prefix(IGameOptions __instance, ref int __result)
-        {
-            try
-            {
-                if (!NjordMenuGUI.noSettingLimit) return true;
-                __result = GameOptionsManager.Instance.CurrentGameOptions.NumImpostors;
-                return false;
-            }
-            catch { return true; }
-        }
-    }
-
-    // ==========================================
-    // === НОВЫЕ ПАТЧИ: EXTENDED LOBBY (15 слотов) ===
-    // ==========================================
-    [HarmonyPatch(typeof(FindAGameManager), nameof(FindAGameManager.Start))]
-    public static class ExtendedLobbyListPatch
-    {
-        public static Scroller scroller;
-
-        public static bool Prefix(FindAGameManager __instance)
-        {
-            if (!NjordMenuGUI.extendedLobby) return true;
-            try
-            {
-                if (__instance.gameContainers == null || __instance.gameContainers.Count == 0) return true;
-                if (__instance.gameContainers.Count > 10) return true;
-
-                GameContainer prefab = __instance.gameContainers[0];
-                GameObject holder = new GameObject("ExtendedLobbyScroller");
-                holder.transform.SetParent(prefab.transform.parent);
-
-                scroller = holder.AddComponent<Scroller>();
-                scroller.Inner = holder.transform;
-                scroller.MouseMustBeOverToScroll = true;
-                scroller.allowY = true;
-                scroller.ScrollWheelSpeed = 0.4f;
-                scroller.SetYBoundsMin(0f);
-                scroller.SetYBoundsMax(4f);
-
-                BoxCollider2D collider = prefab.transform.parent.gameObject.AddComponent<BoxCollider2D>();
-                collider.size = new Vector2(100f, 100f);
-                scroller.ClickMask = collider;
-
-                var list = new System.Collections.Generic.List<GameContainer>();
-                foreach (var gc in __instance.gameContainers)
-                {
-                    gc.transform.SetParent(holder.transform);
-                    gc.transform.localPosition = new Vector3(gc.transform.localPosition.x, gc.transform.localPosition.y, 25f);
-                    list.Add(gc);
-                }
-
-                for (int i = 0; i < 15; i++)
-                {
-                    GameContainer newGc = UnityEngine.Object.Instantiate<GameContainer>(prefab, holder.transform);
-                    newGc.transform.localPosition = new Vector3(newGc.transform.localPosition.x, newGc.transform.localPosition.y - 0.75f * list.Count, 25f);
-                    list.Add(newGc);
-                }
-
-                __instance.gameContainers = new Il2CppReferenceArray<GameContainer>(list.ToArray());
+            if (!NjordMenuGUI.noSettingLimit) return true;
+            if (GameOptionsManager.Instance.CurrentGameOptions.GameMode != GameModes.HideNSeek &&
+                (__instance.Title == StringNames.GameNumImpostors || __instance.Title == StringNames.GamePlayerSpeed))
                 return true;
-            }
-            catch { return true; }
+            __instance.Value += __instance.Increment;
+            __instance.UpdateValue();
+            __instance.OnValueChanged.Invoke(__instance);
+            __instance.AdjustButtonsActiveState();
+            return false;
         }
+        catch { return true; }
     }
+}
 
-    [HarmonyPatch(typeof(FindAGameManager), nameof(FindAGameManager.RefreshList))]
-    public static class ExtendedLobbyRefreshPatch
+[HarmonyPatch(typeof(NumberOption), nameof(NumberOption.Decrease))]
+public static class NumberOption_Decrease_Patch
+{
+    public static bool Prefix(NumberOption __instance)
     {
-        public static void Postfix()
+        try
         {
-            try { if (NjordMenuGUI.extendedLobby && ExtendedLobbyListPatch.scroller != null) ExtendedLobbyListPatch.scroller.ScrollRelative(new Vector2(0f, -100f)); } catch { }
+            if (!NjordMenuGUI.noSettingLimit) return true;
+            if (GameOptionsManager.Instance.CurrentGameOptions.GameMode != GameModes.HideNSeek &&
+                (__instance.Title == StringNames.GameNumImpostors || __instance.Title == StringNames.GamePlayerSpeed))
+                return true;
+            __instance.Value -= __instance.Increment;
+            __instance.UpdateValue();
+            __instance.OnValueChanged.Invoke(__instance);
+            __instance.AdjustButtonsActiveState();
+            return false;
         }
+        catch { return true; }
     }
+}
+
+[HarmonyPatch(typeof(NumberOption), nameof(NumberOption.Initialize))]
+public static class NumberOption_Initialize_Patch
+{
+    public static void Postfix(NumberOption __instance)
+    {
+        try
+        {
+            if (!NjordMenuGUI.noSettingLimit) return;
+            if (GameOptionsManager.Instance.CurrentGameOptions.GameMode != GameModes.HideNSeek &&
+                (__instance.Title == StringNames.GameNumImpostors || __instance.Title == StringNames.GamePlayerSpeed))
+                return;
+            __instance.ValidRange = new FloatRange(-999f, 999f);
+        }
+        catch { }
+    }
+}
+
+[HarmonyPatch(typeof(IGameOptionsExtensions), nameof(IGameOptionsExtensions.GetAdjustedNumImpostors))]
+public static class IGameOptionsExtensions_GetAdjustedNumImpostors_Patch
+{
+    public static bool Prefix(IGameOptions __instance, ref int __result)
+    {
+        try
+        {
+            if (!NjordMenuGUI.noSettingLimit) return true;
+            __result = GameOptionsManager.Instance.CurrentGameOptions.NumImpostors;
+            return false;
+        }
+        catch { return true; }
+    }
+}
+
+// ==========================================
+// === НОВЫЕ ПАТЧИ: EXTENDED LOBBY (15 слотов) ===
+// ==========================================
+[HarmonyPatch(typeof(FindAGameManager), nameof(FindAGameManager.Start))]
+public static class ExtendedLobbyListPatch
+{
+    public static Scroller scroller;
+
+    public static bool Prefix(FindAGameManager __instance)
+    {
+        if (!NjordMenuGUI.extendedLobby) return true;
+        try
+        {
+            if (__instance.gameContainers == null || __instance.gameContainers.Count == 0) return true;
+            if (__instance.gameContainers.Count > 10) return true;
+
+            GameContainer prefab = __instance.gameContainers[0];
+            GameObject holder = new GameObject("ExtendedLobbyScroller");
+            holder.transform.SetParent(prefab.transform.parent);
+
+            scroller = holder.AddComponent<Scroller>();
+            scroller.Inner = holder.transform;
+            scroller.MouseMustBeOverToScroll = true;
+            scroller.allowY = true;
+            scroller.ScrollWheelSpeed = 0.4f;
+            scroller.SetYBoundsMin(0f);
+            scroller.SetYBoundsMax(4f);
+
+            BoxCollider2D collider = prefab.transform.parent.gameObject.AddComponent<BoxCollider2D>();
+            collider.size = new Vector2(100f, 100f);
+            scroller.ClickMask = collider;
+
+            var list = new System.Collections.Generic.List<GameContainer>();
+            foreach (var gc in __instance.gameContainers)
+            {
+                gc.transform.SetParent(holder.transform);
+                gc.transform.localPosition = new Vector3(gc.transform.localPosition.x, gc.transform.localPosition.y, 25f);
+                list.Add(gc);
+            }
+
+            for (int i = 0; i < 15; i++)
+            {
+                GameContainer newGc = UnityEngine.Object.Instantiate<GameContainer>(prefab, holder.transform);
+                newGc.transform.localPosition = new Vector3(newGc.transform.localPosition.x, newGc.transform.localPosition.y - 0.75f * list.Count, 25f);
+                list.Add(newGc);
+            }
+
+            __instance.gameContainers = new Il2CppReferenceArray<GameContainer>(list.ToArray());
+            return true;
+        }
+        catch { return true; }
+    }
+}
+
+[HarmonyPatch(typeof(FindAGameManager), nameof(FindAGameManager.RefreshList))]
+public static class ExtendedLobbyRefreshPatch
+{
+    public static void Postfix()
+    {
+        try { if (NjordMenuGUI.extendedLobby && ExtendedLobbyListPatch.scroller != null) ExtendedLobbyListPatch.scroller.ScrollRelative(new Vector2(0f, -100f)); } catch { }
+    }
+}
 
 
 [HarmonyPatch(typeof(PlayerPhysics), nameof(PlayerPhysics.FixedUpdate))]
@@ -3460,10 +3516,10 @@ public static class InvertControls_Patch
 {
     private static void SeePlayerVent(PlayerPhysics player)
     {
-        #pragma warning disable CS8632
-        if(GameManager.Instance.IsHideAndSeek() && player.myPlayer.Data.RoleType == RoleTypes.Impostor || player == null || 
+#pragma warning disable CS8632
+        if (GameManager.Instance.IsHideAndSeek() && player.myPlayer.Data.RoleType == RoleTypes.Impostor || player == null ||
             AmongUsClient.Instance.GameState != InnerNetClient.GameStates.Started)
-                return;
+            return;
         if (!SeePlayersInVent)
         {
             if (player.myPlayer.invisibilityAlpha == 0.3f)
@@ -3515,20 +3571,21 @@ public static class InvertControls_Patch
         }
 
         SeePlayerVent(__instance);
+        }
     }
-}
-[HarmonyPatch(typeof(LobbyBehaviour), nameof(LobbyBehaviour.Start))]
-public static class LobbyStart_ApplyLevelSpoof
-{
-    public static void Postfix()
+    [HarmonyPatch(typeof(LobbyBehaviour), nameof(LobbyBehaviour.Start))]
+    public static class LobbyStart_ApplyLevelSpoof
     {
-        // В NjordMenuGUI есть статическая переменная spoofLevelString и isEditingLevel
-        if (!NjordMenuGUI.isEditingLevel && uint.TryParse(NjordMenuGUI.spoofLevelString, out uint parsedLvl))
+        public static void Postfix()
         {
-            uint targetLevel = parsedLvl > 0 ? parsedLvl - 1 : 0;
-            try { AmongUs.Data.DataManager.Player.stats.level = targetLevel; }
-            catch { try { AmongUs.Data.DataManager.Player.Stats.Level = targetLevel; } catch { } }
-            AmongUs.Data.DataManager.Player.Save();
+            // В NjordMenuGUI есть статическая переменная spoofLevelString и isEditingLevel
+            if (!NjordMenuGUI.isEditingLevel && uint.TryParse(NjordMenuGUI.spoofLevelString, out uint parsedLvl))
+            {
+                uint targetLevel = parsedLvl > 0 ? parsedLvl - 1 : 0;
+                try { AmongUs.Data.DataManager.Player.stats.level = targetLevel; }
+                catch { try { AmongUs.Data.DataManager.Player.Stats.Level = targetLevel; } catch { } }
+                AmongUs.Data.DataManager.Player.Save();
+            }
         }
     }
 }
@@ -3588,17 +3645,17 @@ public static class RPCSniffer_Patch
     {
         if (__instance == null) return true;
 
-        // Игнорируем пакеты от самого себя, чтобы радар не пищал на наши же действия
+       
         if (PlayerControl.LocalPlayer != null && __instance == PlayerControl.LocalPlayer) return true;
 
         if (NjordMenuGUI.LogAllRPCs)
         {
-            // Если пакета НЕТ в белом списке ваниллы — это 100% софт!
+            
             if (!VanillaRPCs.Contains(callId))
             {
                 string pNameSniff = (__instance.Data != null && !string.IsNullOrEmpty(__instance.Data.PlayerName)) ? __instance.Data.PlayerName : $"Player_{__instance.PlayerId}";
 
-                // Проверяем, есть ли этот RPC в нашей базе KnownMods
+                
                 if (KnownMods.TryGetValue(callId, out var modInfo))
                 {
                     // Знакомый чит — выводим название и ID
@@ -3612,5 +3669,86 @@ public static class RPCSniffer_Patch
             }
         }
         return true;
+    }
+}
+
+// === НОВЫЕ ПАТЧИ: АНЛОК И LOBBY INFO 
+
+
+[HarmonyPatch(typeof(HatManager), nameof(HatManager.Initialize))]
+public static class UnlockCosmetics_HatManager_Initialize_Postfix
+{
+    public static void Postfix(HatManager __instance)
+    {
+        if (!NjordMenuGUI.unlockCosmetics) return;
+
+        foreach (var bundle in __instance.allBundles) bundle.Free = true;
+        foreach (var hat in __instance.allHats) hat.Free = true;
+        foreach (var nameplate in __instance.allNamePlates) nameplate.Free = true;
+        foreach (var pet in __instance.allPets) pet.Free = true;
+        foreach (var skin in __instance.allSkins) skin.Free = true;
+        foreach (var visor in __instance.allVisors) visor.Free = true;
+        foreach (var starBundle in __instance.allStarBundles) starBundle.price = 0;
+    }
+}
+
+[HarmonyPatch(typeof(PlayerPurchasesData), nameof(PlayerPurchasesData.GetPurchase))]
+public static class UnlockCosmetics_PlayerPurchasesData_GetPurchase_Prefix
+{
+    public static bool Prefix(ref bool __result)
+    {
+        if (!NjordMenuGUI.unlockCosmetics) return true;
+        __result = true;
+        return false;
+    }
+}
+
+[HarmonyPatch(typeof(GameContainer), nameof(GameContainer.SetupGameInfo))]
+public static class MoreLobbyInfo_GameContainer_SetupGameInfo_Postfix
+{
+    public static void Postfix(GameContainer __instance)
+    {
+        if (!NjordMenuGUI.moreLobbyInfo) return;
+
+        var trueHostName = __instance.gameListing.TrueHostName;
+        const string separator = "<#0000>000000000000000</color>";
+        var age = __instance.gameListing.Age;
+        var lobbyTime = $"Age: {age / 60}:{(age % 60 < 10 ? "0" : "")}{age % 60}";
+
+        
+        int platId = (int)__instance.gameListing.Platform;
+        string platformStr = platId switch
+        {
+            1 => "Epic",
+            2 => "Steam",
+            3 => "Mac",
+            4 => "Microsoft Store",
+            5 => "Itch.io",
+            6 => "iOS",
+            7 => "Android",
+            8 => "Nintendo Switch",
+            9 => "Xbox",
+            10 => "PlayStation",
+            112 => "Starlight",
+            _ => "Unknown"
+        };
+
+        // Динамически красим код и платформу в акцентный цвет меню!
+        string hexColor = ColorUtility.ToHtmlStringRGB(NjordMenuGUI.currentAccentColor);
+
+        __instance.capacity.text = $"<size=40%>{separator}\n{trueHostName}\n{__instance.capacity.text}\n" +
+                                   $"<color=#{hexColor}>{GameCode.IntToGameName(__instance.gameListing.GameId)}</color>\n" +
+                                   $"<color=#{hexColor}>{platformStr}</color>\n{lobbyTime}\n{separator}</size>";
+    }
+}
+
+[HarmonyPatch(typeof(FindAGameManager), nameof(FindAGameManager.HandleList))]
+public static class MoreLobbyInfo_FindAGameManager_HandleList_Postfix
+{
+    public static void Postfix(HttpMatchmakerManager.FindGamesListFilteredResponse response, FindAGameManager __instance)
+    {
+        if (!NjordMenuGUI.moreLobbyInfo) return;
+        
+        __instance.TotalText.text = response.Metadata.AllGamesCount.ToString();
     }
 }
