@@ -12,7 +12,7 @@
 * **Advanced Movement:** True NoClip, SpeedHack, Teleport to Cursor, Magnet Cursor, and Inverted Controls.
 * **Role Buffs:** Infinite kill reach, kill anyone, endless Shapeshift/Battery/Vent time, and zero cooldowns.
 * **Lobby & Host Controls:** Force pre-game roles (without black screens), Smart End Game, unlimited settings, and Spawn/Despawn maps or lobbies on the fly.
-* **Trolling & Fun:** Ride players, spawn massive clone formations (Heart, Snowflake, Pentagram), Rainbow Colors, custom Chat Commands (`/color`, `/w`), and fake animations.
+* **Trolling & Fun:**  Rainbow Colors, custom Chat Commands (`/color`, `/w`), and fake animations.
 * **UI Customization:** Fully modular GUI with RGB mode, custom image backgrounds (`MenuBG.png`), and smooth animations.
 <img width="1277" height="717" alt="Снимок экрана 2026-04-24 233814" src="https://github.com/user-attachments/assets/83996161-7953-4294-a876-a2c36522527d" />
 
