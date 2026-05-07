@@ -101,6 +101,7 @@ namespace NjordMenu
         public static float walkSpeed = 1f;
 
         // Оставлю туглы на фризы тута
+        // Также туглы на логи в консоли окошка с перегрузами были вырезаны из за бесполезности
         public static bool runOverload;
         public static bool overloadReset;
         public static bool showOverload;
@@ -108,11 +109,13 @@ namespace NjordMenu
         public static bool overloadHost;
         public static bool overloadCrew;
         public static bool overloadImps;
-        public static bool olLockTargets;
-        public static bool olAutoAdapt;
-        public static bool olAutoStop;
-        public static bool olKillSwitch;
-        public static bool olAutoStart;
+        
+        // Нереализованные переключалки (надо будет сделать вручную их изменение)
+        public static bool olLockTargets; // хз чета не разобрался
+        public static bool olAutoAdapt; // автонастройка фриза под текущий пинг, чтобы не вылетало
+        public static bool olAutoStop; // выкл фриза когда нет игроков (мб даже когда выходишь из игры)
+        public static bool olKillSwitch; // выкл фриза когда слишком большой пинг
+        public static bool olAutoStart; // фриз сам включится как только игрок прогрузится (надо переработать мб тк если кидать оверлоад сразу после захода, то будет бан античитом)
 
         // === ПЕРЕМЕННЫЕ ДЛЯ ОТСЛЕЖИВАНИЯ ИГРОКОВ (ВХОД/ВЫХОД) ===
         public static bool DetailedJoinInfo = true;
