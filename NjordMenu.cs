@@ -62,11 +62,17 @@ namespace NjordMenu
             MoreLobbyInfoConfig = MenuConfig.Bind("NjordMenu.Visuals", "MoreLobbyInfo", true, "Show host, code, and platform in the lobby browser.");
 
             ClassInjector.RegisterTypeInIl2Cpp<NjordMenuGUI>();
+            ClassInjector.RegisterTypeInIl2Cpp<OverloadUI>();
 
             var guiObject = new GameObject("NjordMenu_Object");
             UnityEngine.Object.DontDestroyOnLoad(guiObject);
             guiObject.hideFlags = HideFlags.HideAndDontSave;
             guiObject.AddComponent<NjordMenuGUI>();
+
+            var OverloadUI = new GameObject("OverloadUI_Object");
+            UnityEngine.Object.DontDestroyOnLoad(OverloadUI);
+            OverloadUI.hideFlags = HideFlags.HideAndDontSave;
+            OverloadUI.AddComponent<OverloadUI>();
 
             var harmony = new Harmony("com.njord.harmony");
             harmony.PatchAll();
@@ -93,6 +99,21 @@ namespace NjordMenu
         public static bool tpToCursor = false;
         public static bool dragToCursor = false;
         public static float walkSpeed = 1f;
+
+        // Оставлю туглы на фризы тута
+        public static bool runOverload;
+        public static bool overloadReset;
+        public static bool showOverload;
+        public static bool overloadAll;
+        public static bool overloadHost;
+        public static bool overloadCrew;
+        public static bool overloadImps;
+        public static bool olLockTargets;
+        public static bool olAutoAdapt;
+        public static bool olAutoStop;
+        public static bool olKillSwitch;
+        public static bool olAutoStart;
+
         // === ПЕРЕМЕННЫЕ ДЛЯ ОТСЛЕЖИВАНИЯ ИГРОКОВ (ВХОД/ВЫХОД) ===
         public static bool DetailedJoinInfo = true;
         private static List<byte> lastPlayerIds = new List<byte>();
@@ -312,7 +333,8 @@ namespace NjordMenu
         private bool stylesInited = false;
         private GUIStyle windowStyle, btnStyle, activeTabStyle, headerStyle, boxStyle;
         private GUIStyle sidebarStyle, sidebarBtnStyle, activeSidebarBtnStyle, titleStyle;
-        private GUIStyle toggleOnStyle, toggleOffStyle, toggleLabelStyle, safeLineStyle;
+        private GUIStyle toggleOnStyle, toggleOffStyle, toggleLabelStyle;
+        public static GUIStyle safeLineStyle;
         private GUIStyle sliderStyle, sliderThumbStyle, subTabStyle, activeSubTabStyle;
         public GUIStyle inputBlockStyle;
         private Texture2D texWindowBg, texBoxBg, texBtnBg, texAccent, texSidebarBg;
@@ -1735,6 +1757,7 @@ namespace NjordMenu
             if (GUILayout.Button(">", btnStyle, GUILayout.Width(30), GUILayout.Height(25))) { selectedSpoofMenuIndex++; if (selectedSpoofMenuIndex >= spoofMenuNames.Length) selectedSpoofMenuIndex = 0; }
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
+            showOverload = DrawToggle(showOverload, "Show Overload UI");
             GUILayout.EndVertical();
         }
         private Vector2 outfitsScrollPos = Vector2.zero;
@@ -2736,6 +2759,7 @@ namespace NjordMenu
     {
         public static void Postfix(PlayerPhysics __instance)
         {
+            if(__instance.AmOwner) OverloadHandler.Run();
             if (__instance == null || __instance.myPlayer == null || __instance.myPlayer.Data == null) return;
             try
             {
@@ -3516,7 +3540,6 @@ public static class InvertControls_Patch
 {
     private static void SeePlayerVent(PlayerPhysics player)
     {
-#pragma warning disable CS8632
         if (GameManager.Instance.IsHideAndSeek() && player.myPlayer.Data.RoleType == RoleTypes.Impostor || player == null ||
             AmongUsClient.Instance.GameState != InnerNetClient.GameStates.Started)
             return;
@@ -3524,7 +3547,7 @@ public static class InvertControls_Patch
         {
             if (player.myPlayer.invisibilityAlpha == 0.3f)
             {
-                PhantomRole? role = player.myPlayer.Data.Role as PhantomRole;
+                PhantomRole role = player.myPlayer.Data.Role as PhantomRole;
                 if (role != null)
                 {
                     player.myPlayer.SetInvisibility(role.isInvisible);
@@ -3551,7 +3574,7 @@ public static class InvertControls_Patch
         }
         else
         {
-            PhantomRole? role = player.myPlayer.Data.Role as PhantomRole;
+            PhantomRole role = player.myPlayer.Data.Role as PhantomRole;
             if (role != null)
             {
                 player.myPlayer.SetInvisibility(role.isInvisible);
@@ -3570,7 +3593,7 @@ public static class InvertControls_Patch
             __instance.body.velocity = -__instance.body.velocity;
         }
 
-        SeePlayerVent(__instance);
+           SeePlayerVent(__instance);
         }
     }
     [HarmonyPatch(typeof(LobbyBehaviour), nameof(LobbyBehaviour.Start))]
